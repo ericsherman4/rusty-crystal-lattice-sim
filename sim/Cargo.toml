@@ -7,7 +7,8 @@ edition = "2021"
 # Revert dynamic linking feature before releasing game! 
 # Otherwise you will need to include libbevy_dylib alongside your game if you want it to run. 
 # If you remove the "dynamic" feature, your game executable can run standalone.
-bevy = {version = "0.13.2", feaetures =["dynamic_linking"]}
+bevy = {version = "0.13.2", features =["dynamic_linking"]}
+smooth-bevy-cameras = "0.11.0"
 
 # Enable a small amount of optimization in debug mode
 [profile.dev]

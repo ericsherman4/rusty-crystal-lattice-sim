@@ -1,76 +1,94 @@
 use bevy::prelude::*;
+use smooth_bevy_cameras::controllers::unreal::{UnrealCameraBundle, UnrealCameraController, UnrealCameraPlugin};
+use smooth_bevy_cameras::{LookTransformPlugin};
 
 fn main() {
     App::new()
         // plugins are pretty cool and enforces modular. if you don't want it, just remove it!
-        .add_plugins((DefaultPlugins, introduce::CustomHelloPlugin))
+        .add_plugins((DefaultPlugins,LookTransformPlugin ,UnrealCameraPlugin::default()))
+        .add_systems(Startup, setup)
+        // .add_systems(Update, smooth_bevy_cameras::controllers::unreal::control_system)
+        // .add_systems(Update, move_camera_system)
         .run()
 }
 
-mod introduce {
 
-    // ECS system
-    // system is a normal rust function
-    // a component is rust structs that implement the Component trait
-    // #[derive(Component)]
-    // entities are a simple type containing a unique number
-    // resources are globally unique data fo some kind. (for example, elasped time, renderers, assets ((sounds, meshes)))
-    use super::*;
-    pub struct CustomHelloPlugin;
 
-    impl Plugin for CustomHelloPlugin {
-        fn build(&self, app: &mut App) {
-            app.insert_resource(GreetTimer(Timer::from_seconds(2_f32, TimerMode::Repeating)))
-                .add_systems(Startup, add_people)
-                // systems runs in default whenever possible!
-                // can add .chain() on the tuple if we want to enforce a particular order the functions run in
-                .add_systems(
-                    Startup,
-                    (hello_world, (greet_people, greet_personless).chain()),
-                )
-                .add_systems(Update, clock_tick);
-        }
-    }
+// throw some basic shapes in a 3d environment
+fn setup(
+    mut commands: Commands,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+) {
+    // Sphere
 
-    // an example of a system (normal rust functions)
-    fn hello_world() {
-        println!("hello world");
-    }
+    // Light
+    let point_light = PointLight {
+        shadows_enabled: true,
+        intensity: 2_000_000.0,
+        range: 100.0,
+        ..default()
+    };
 
-    fn add_people(mut commands: Commands) {
-        commands.spawn((Person, Name(String::from("Bob"))));
-        commands.spawn(Person); // no name
-        commands.spawn(Name("I am not a person".to_string()));
-    }
+    let point_light_bundle = PointLightBundle {
+        point_light: point_light,
+        transform: Transform::from_xyz(4.0, 8.0, 4.0),
+        ..default()
+    };
 
-    // paremeters we pass in to a system function define what data the system runs on
-    // runs on all entities with the person and the name component
-    fn greet_people(query: Query<&Name, With<Person>>) {
-        for name in &query {
-            println!("hello {}!", name.0);
-        }
-    }
+    commands.spawn(point_light_bundle);
 
-    // you can also make mutable querts
-    fn greet_personless(query: Query<&Name, Without<Person>>) {
-        for name in &query {
-            println!("personless person: {}", name.0);
-        }
-    }
+    // 
+    commands.spawn(PbrBundle {
+        mesh: meshes.add(Cuboid::new(1.0, 1.0, 1.0)),
+        material: materials.add(Color::GREEN),
+        transform: Transform::from_xyz(0.0, 2.0, 0.0),
+        ..default()
+    });
 
-    fn clock_tick(time: Res<Time>, mut timer: ResMut<GreetTimer>) {
-        if timer.0.tick(time.delta()).just_finished() {
-            println!("hi {}", time.delta().as_millis());
-        }
-    }
+    commands.spawn(PbrBundle {
+        mesh: meshes.add(Cuboid::new(1.0, 1.0, 1.0)),
+        material: materials.add(Color::RED),
+        transform: Transform::from_xyz(2.0, 0.0, 0.0),
+        ..default()
+    });
 
-    // a component
-    #[derive(Component)]
-    struct Person;
+    commands.spawn(PbrBundle {
+        mesh: meshes.add(Cuboid::new(1.0, 1.0, 1.0)),
+        material: materials.add(Color::BLUE),
+        transform: Transform::from_xyz(0.0, 0.0, 2.0),
+        ..default()
+    });
 
-    #[derive(Component)]
-    struct Name(String);
+    // let bevy_camera = Camera3dBundle {
+    //     projection: PerspectiveProjection {
+    //         ..default()
+    //     }.into(),
+    //     // looking at is how to orient
+    //     // y is up in bevy
+    //     transform: Transform::from_xyz(-6.0, 10.0, 9.0).looking_at(Vec3::ZERO, Vec3::Y),
+    //     ..default()
+    // };
 
-    #[derive(Resource)]
-    struct GreetTimer(Timer);
+
+    // let look_transform = LookTransformBundle {
+    //     transform: LookTransform::new(Vec3::new(-6.0, 10.0, 9.0), Vec3::default(), Vec3::Y),
+    //     smoother: Smoother::new(0.9), // Value between 0.0 and 1.0, higher is smoother.
+    // };
+
+    let unreal_camera = UnrealCameraBundle::new(
+        UnrealCameraController::default(),
+        Vec3::new(-2.0, 5.0, 5.0),
+        Vec3::new(0., 0., 0.),
+        Vec3::Y,
+    ); 
+
+
+    commands.spawn(Camera3dBundle::default()).insert(unreal_camera);
+
 }
+
+// fn move_camera_system(mut cameras: Query<&mut LookTransform>) {
+//     // Later, another system will update the `Transform` and apply smoothing automatically.
+//     for mut c in cameras.iter_mut() { c.target += Vec3::new(0.001, 0.001, 0.001); }
+// }
