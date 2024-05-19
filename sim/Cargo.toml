@@ -1,0 +1,20 @@
+[package]
+name = "sim"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+# Revert dynamic linking feature before releasing game! 
+# Otherwise you will need to include libbevy_dylib alongside your game if you want it to run. 
+# If you remove the "dynamic" feature, your game executable can run standalone.
+bevy = {version = "0.13.2", feaetures =["dynamic_linking"]}
+
+# Enable a small amount of optimization in debug mode
+[profile.dev]
+opt-level = 1
+
+# Enable high optimizations for dependencies (incl. Bevy), but not for our code:
+[profile.dev.package."*"]
+opt-level = 3
+
+#TODO:  if more performance is needed, can use LLD linker instead of Rust linker
