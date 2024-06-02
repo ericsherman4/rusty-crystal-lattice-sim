@@ -3,6 +3,8 @@ use bevy::prelude::*;
 use strum::IntoEnumIterator;
 use strum_macros::EnumIter;
 
+mod spring;
+
 // https://docs.rs/smooth-bevy-cameras/0.11.0/smooth_bevy_cameras/
 // https://github.com/bonsairobo/smooth-bevy-cameras/blob/main/examples/simple_unreal.rs
 use smooth_bevy_cameras::controllers::unreal::{
@@ -148,6 +150,8 @@ fn setup(
     create_light(&mut commands);
     create_coord_system(&mut commands, &mut meshes, &mut materials);
     create_cameras(&mut commands);
+    spring::create_spring(&mut commands, &mut meshes, &mut materials)
+
 }
 
 // this doesnt work idk lol
