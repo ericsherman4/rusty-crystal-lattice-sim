@@ -19,9 +19,9 @@ check:
 build-rel: 
 	cargo build --release
 
-## build-dbg: Build executable in debug mode
-.PHONY: build-dbg
-build-dbg: 
+## build: Build executable in debug mode
+.PHONY: build
+build: 
 	cargo build
 
 ################################################
