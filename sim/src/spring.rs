@@ -10,8 +10,9 @@ pub struct Node
 }
 
 impl Node {
-    fn new(pos: Vec3, vel: Vec3, rad: f32) -> Self {
+    fn new(id: u32,pos: Vec3, vel: Vec3, rad: f32) -> Self {
         Node {
+            id,
             pos,
             vel,
             sum_forces : Vec3::ZERO,
@@ -31,7 +32,9 @@ pub struct Link<'a>{
 }
 
 impl<'a> Link<'a>{
-    fn new(spring_const: f32, orig_length: f32, girth: f32, to_node : &'a Node, from_node: &'a Node ) -> Self {
+    fn new(spring_const: f32, orig_length: f32, girth: f32, to_node_id : &'a Node, from_node_id: &'a Node ) -> Self {
+        // function returns an instance of Link
+        // When function names are the same as field names, don't need to type it twice.
         Link {
             spring_const,
             orig_length,
@@ -44,14 +47,17 @@ impl<'a> Link<'a>{
     }
 }
 
-// used on Nodes that are anchored
-// or you you can just have this as a flag in the node? 
-// kind of interesting to do because it fully changes the calculation
-// can maybe think of it as infinite mass? 
-// #[derive(Component)]
-// pub struct Static;
-
-
+// maybe can make a custom mesh to solve this but this is easier
+// https://www.christopherbiscardi.com/why-do-bevy-sprites-spawn-with-the-center-at-0-0
+// fn set_cuboid_pos_by_end(target_position: Vec3, length_in_dir: f32, dir: CuboidOffsetDir) -> Vec3
+// {
+//     // By default, it sets it based on origin.
+//     // Returns a modified transform that will place the cuboid correctly.
+//     match dir {
+//         CuboidOffsetDir::Y => Vec3::new(target_position.x, target_position.y + length_in_dir/2.0, target_position.z),
+//         _ => Vec3::default(),
+//     }
+// }
 
 
 pub fn create_spring(
@@ -65,8 +71,8 @@ pub fn create_spring(
     let vel_node1 = Vec3::new(0.,0.0,0.); 
     let vel_node2 = Vec3::new(0.1,0.1,0.1);
 
-    let node1 = Node::new(pos_node1, vel_node1, sphere_rad);
-    let node2 = Node::new(pos_node2, vel_node2, sphere_rad);
+    let node1 = Node::new(0,pos_node1, vel_node1, sphere_rad);
+    let node2 = Node::new(1,pos_node2, vel_node2, sphere_rad);
 
     let link = Link::new(2., 5., 0.2, &node2, &node1);
 
