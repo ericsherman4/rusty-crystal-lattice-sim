@@ -1,15 +1,12 @@
 use bevy::prelude::*;
+use std::time::Duration;
 
-use strum::IntoEnumIterator;
-use strum_macros::EnumIter;
-
-mod spring;
+// mod spring;
+mod scene;
 
 // https://docs.rs/smooth-bevy-cameras/0.11.0/smooth_bevy_cameras/
 // https://github.com/bonsairobo/smooth-bevy-cameras/blob/main/examples/simple_unreal.rs
-use smooth_bevy_cameras::controllers::unreal::{
-    UnrealCameraBundle, UnrealCameraController, UnrealCameraPlugin,
-};
+use smooth_bevy_cameras::controllers::unreal::UnrealCameraPlugin;
 use smooth_bevy_cameras::LookTransformPlugin;
 
 fn main() {
@@ -20,154 +17,123 @@ fn main() {
             LookTransformPlugin,
             UnrealCameraPlugin::default(),
         ))
-        .add_systems(Startup, setup)
-        .add_systems(Update, keyboard_input)
+
+        .insert_resource(Time::<Fixed>::from_duration(Duration::from_secs(3)))
+        
+
+        // Draw the initial scene
+        .add_systems(Startup, scene::setup)
+
+        // not currently working
+        .add_systems(Update, scene::camera_reset_control) 
+
+        // .add_systems(Update, insert_spring)
+
+        // time example https://github.com/bevyengine/bevy/blob/latest/examples/time/time.rs
+        .add_systems(FixedUpdate, test_ids)
+        // .add_systems(Startup, test_ids)
+
+        .add_systems(FixedUpdate, get_links)
+
+        // Run it
         .run()
 }
 
-fn create_light(commands: &mut Commands) {
-    // Light
-    let point_light = PointLight {
-        shadows_enabled: true,
-        intensity: 1_300_000.0,
-        range: 100.0,
-        ..default()
-    };
-
-    let point_light_bundle = PointLightBundle {
-        point_light: point_light,
-        transform: Transform::from_xyz(4.0, 8.0, 4.0),
-        ..default()
-    };
-
-    commands.spawn(point_light_bundle);
+#[derive(Component)]
+pub struct Node
+{
+    pos: Vec3
 }
 
-#[derive(EnumIter)]
-enum Axis {
-    X,
-    Y,
-    Z,
-}
-
-// maybe can make a custom mesh to solve this but this is easier
-// https://www.christopherbiscardi.com/why-do-bevy-sprites-spawn-with-the-center-at-0-0
-// fn set_cuboid_pos_by_end(target_position: Vec3, length_in_dir: f32, dir: CuboidOffsetDir) -> Vec3
-// {
-//     // By default, it sets it based on origin.
-//     // Returns a modified transform that will place the cuboid correctly.
-//     match dir {
-//         CuboidOffsetDir::Y => Vec3::new(target_position.x, target_position.y + length_in_dir/2.0, target_position.z),
-//         _ => Vec3::default(),
-//     }
-// }
-
-fn create_axis(
-    direction: Axis,
-    meshes: &mut ResMut<Assets<Mesh>>,
-    materials: &mut ResMut<Assets<StandardMaterial>>,
-) -> PbrBundle {
-    const GIRTH: f32 = 0.2;
-    const LENGTH: f32 = 5.;
-
-    let cuboid_dim: Vec3;
-    let adjusted_position: Vec3;
-    let color: Color;
-
-    match direction {
-        Axis::X => {
-            cuboid_dim = Vec3::new(LENGTH, GIRTH, GIRTH);
-            adjusted_position = Vec3::new(LENGTH / 2., 0., 0.);
-            color = Color::RED;
-        }
-        Axis::Y => {
-            cuboid_dim = Vec3::new(GIRTH, LENGTH, GIRTH);
-            adjusted_position = Vec3::new(0., LENGTH / 2., 0.);
-            color = Color::GREEN;
-        }
-        Axis::Z => {
-            cuboid_dim = Vec3::new(GIRTH, GIRTH, LENGTH);
-            adjusted_position = Vec3::new(0., 0., LENGTH / 2.);
-            color = Color::BLUE;
-        }
-    }
-
-    PbrBundle {
-        mesh: meshes.add(Cuboid::from_size(cuboid_dim)),
-        material: materials.add(color),
-        transform: Transform::from_translation(adjusted_position),
-        ..default()
-    }
-}
-
-fn create_coord_system(
-    commands: &mut Commands,
-    meshes: &mut ResMut<Assets<Mesh>>,
-    materials: &mut ResMut<Assets<StandardMaterial>>,
-) {
-    // Origin
-    commands.spawn(PbrBundle {
-        mesh: meshes.add(Sphere::default().mesh().uv(32, 18)),
-        material: materials.add(Color::WHITE),
-        transform: Transform::from_translation(Vec3::ZERO),
-        ..default()
-    });
-
-    for variant in Axis::iter() {
-        commands.spawn(create_axis(variant, meshes, materials));
-    }
-}
-
-fn create_cameras(commands: &mut Commands) {
-    const STARTING_CAM_POS: Vec3 = Vec3::new(5., 8., 12.0);
-
-    let bevy_camera = Camera3dBundle {
-        projection: PerspectiveProjection { ..default() }.into(),
-        // looking at is how to orient
-        // y is up in bevy
-        transform: Transform::from_translation(STARTING_CAM_POS).looking_at(Vec3::ZERO, Vec3::Y),
-        ..default()
-    };
-
-    let unreal_camera = UnrealCameraBundle::new(
-        UnrealCameraController::default(),
-        Vec3::from(STARTING_CAM_POS),
-        Vec3::new(0., 0., 0.),
-        Vec3::Y,
-    );
-
-    commands
-        .spawn((MyCamera, bevy_camera))
-        .insert(unreal_camera);
-}
-
-// throw some basic shapes in a 3d environment
-fn setup(
-    mut commands: Commands,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
-) {
-    create_light(&mut commands);
-    create_coord_system(&mut commands, &mut meshes, &mut materials);
-    create_cameras(&mut commands);
-    spring::create_spring(&mut commands, &mut meshes, &mut materials)
-
-}
-
-// this doesnt work idk lol
-// not sure if the library gives us the ability to do this
-// probably write own in the future and get rid of the unreal camera controls you dont want
-fn keyboard_input(
-    keys: Res<ButtonInput<KeyCode>>,
-    mut query: Query<&mut Transform, With<MyCamera>>,
-) {
-    if keys.just_pressed(KeyCode::Space) {
-        for mut trans in &mut query {
-            println!("reseting camera!");
-            *trans = Transform::from_xyz(-2.5, 4.5, 9.0);
+impl Node {
+    fn new(pos: Vec3) -> Self
+    {
+        Self {
+            pos
         }
     }
 }
 
 #[derive(Component)]
-struct MyCamera;
+#[derive(Debug)]
+pub struct Link
+{
+    to: u32,
+    from: u32,
+    to_ent: Entity,
+    from_ent: Entity,
+}
+
+impl Link {
+    fn new(to: u32, from: u32, to_ent: Entity, from_ent: Entity) -> Self {
+        Self {
+            to,
+            from,
+            to_ent,
+            from_ent
+        }
+    }
+}
+
+pub fn test_ids(
+    time: Res<Time>, 
+    mut commands: Commands,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+) {
+    let node1 = commands.spawn((Node::new(Vec3 { x: (3.), y: (3.), z: (3.) }))).id();
+    let node2 = commands.spawn((Node::new(Vec3 { x: (6.), y: (6.), z: (6.) }))).id();
+    let node3 = commands.spawn(Node::new(Vec3::new(5.,5.,5.))).id();
+
+    let link1 = commands.spawn((Link::new(node1.index(), node2.index(), node1, node2))).id();
+    let link2 = commands.spawn((Link::new(node1.index(), node3.index(), node1, node3))).id();
+
+    // println!(
+    //     "Update: this is generic time clock, delta is {:?} and elapsed is {:?}. The nodes index is {} and {} and link is {}",
+    //     time.delta(),
+    //     time.elapsed(),
+    //     node1.index(),
+    //     node2.index(),
+    //     link1.index(),
+    // );
+
+}
+
+fn get_links(time: Res<Time>, linkq: Query<(Entity, &Link)>,mut nodes: Query<(Entity, &mut Node)>)
+{
+    println!("=======================");
+    for (entity, link) in linkq.iter() {
+        
+        println!(
+            "Changing link {:?}, to_pre is {:?}, from_pre is {:?}", 
+            entity.index(),
+            nodes.get(link.to_ent).expect("help").1.pos,
+            nodes.get(link.from_ent).expect("help").1.pos,
+        );
+
+        let (_,mut node1) = nodes.get_mut(link.to_ent).expect("help");
+        node1.pos = Vec3::new(1., 1., 1.);
+
+        let (_,mut node2) = nodes.get_mut(link.from_ent).expect("help");
+        node2.pos = Vec3::new(1., 1., 1.);
+
+        println!(
+            "Changing link {:?}, to_post is {:?}, from_post is {:?}", 
+            entity.index(),
+            nodes.get(link.to_ent).expect("help").1.pos,
+            nodes.get(link.from_ent).expect("help").1.pos,
+        );
+        
+    }
+    println!("=======================");
+}
+
+
+// Insert a spring into the scene
+// fn insert_spring(
+//     mut commands: Commands,
+//     mut meshes: ResMut<Assets<Mesh>>,
+//     mut materials: ResMut<Assets<StandardMaterial>>,
+// ) {
+//     spring::create_spring(&mut commands, &mut meshes, &mut materials);
+// }
