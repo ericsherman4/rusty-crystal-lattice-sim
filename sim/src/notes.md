@@ -9,13 +9,15 @@ More discussion on world access vs doing it through commands
 
 ## The whole issue of having a link that has two nodes but nodes can be shared between multiple links
 - https://gamedev.stackexchange.com/questions/204007/in-bevy-ecs-what-is-a-good-way-to-have-entities-reference-each-other
+- https://github.com/bevyengine/bevy/discussions/13309
 
 
 ## Misc
 Hmm this spawn empty is also interesting
 https://docs.rs/bevy_ecs/latest/bevy_ecs/world/struct.World.html#method.spawn_empty
 
-
+## Bevy Docs
+- Good overview of Bevy and ECS (compared to OOP): https://www.youtube.com/watch?v=B6ZFuYYZCSY
 
 # Extension cloth sim
 it would be great to define the x y z and direction of how many nodes you want. 

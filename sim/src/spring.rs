@@ -1,4 +1,5 @@
 use bevy::{ecs::query, prelude::*};
+use rand::prelude::*;
 
 #[derive(Component)]
 pub struct Node
@@ -10,9 +11,8 @@ pub struct Node
 }
 
 impl Node {
-    fn new(id: u32,pos: Vec3, vel: Vec3, rad: f32) -> Self {
+    fn new(pos: Vec3, vel: Vec3, rad: f32) -> Self {
         Node {
-            id,
             pos,
             vel,
             sum_forces : Vec3::ZERO,
@@ -22,27 +22,30 @@ impl Node {
 }
 
 #[derive(Component)]
-pub struct Link<'a>{
-    // don't think we need a pos as the pos is determined by the 2 nodes.
+
+pub struct Link{
     spring_const: f32,
     orig_length: f32,
-    to_node: &'a Node,
-    from_node: &'a Node,
+    pub to : Entity,
+    pub from: Entity,
     mesh: Mesh, 
 }
 
-impl<'a> Link<'a>{
-    fn new(spring_const: f32, orig_length: f32, girth: f32, to_node_id : &'a Node, from_node_id: &'a Node ) -> Self {
+
+
+impl Link{
+    // from denotes from which node the link is connected and 
+    // to denotes to which node the link is connected
+    fn new(spring_const: f32, orig_length: f32, girth: f32, to: Entity, from:Entity ) -> Self {
         // function returns an instance of Link
         // When function names are the same as field names, don't need to type it twice.
         Link {
             spring_const,
             orig_length,
-            to_node,
-            from_node,
-
-            // we shall use x as the length and then we will functions to rotate and move accordingly.
-            mesh : Cuboid::new(orig_length, girth, girth).mesh(),
+            to,
+            from,
+            // we shall use x as the length and then we will write functions to rotate and move accordingly.
+            mesh : Cuboid::new(girth, girth, -orig_length).mesh(),
         }
     }
 }
@@ -60,40 +63,37 @@ impl<'a> Link<'a>{
 // }
 
 
+fn get_rand_num(rng: &mut ThreadRng) -> f32 {
+    rng.gen_range(-10.0..10.0)
+}
+
+
 pub fn create_spring(
     commands: &mut Commands, 
     meshes: &mut ResMut<Assets<Mesh>>, 
-    materials: &mut ResMut<Assets<StandardMaterial>>
+    materials: &mut ResMut<Assets<StandardMaterial>>,
 ) {
+
+    let mut rng = rand::thread_rng();
+    
+    // some hardcoded parameters for now
     let sphere_rad:f32  = 0.3; 
-    let pos_node1 = Vec3::new(0., 0., 5.); 
-    let pos_node2 = Vec3::new(5., 0., 5.);
-    let vel_node1 = Vec3::new(0.,0.0,0.); 
-    let vel_node2 = Vec3::new(0.1,0.1,0.1);
+    let node1_pos = Vec3::new(
+        get_rand_num(&mut rng),
+        get_rand_num(&mut rng),
+        get_rand_num(&mut rng)
+    ); 
+    let node2_pos = Vec3::new(
+        get_rand_num(&mut rng),
+        get_rand_num(&mut rng),
+        get_rand_num(&mut rng)
+    );
 
-    let node1 = Node::new(0,pos_node1, vel_node1, sphere_rad);
-    let node2 = Node::new(1,pos_node2, vel_node2, sphere_rad);
+    // Create a component
+    let node1 = Node::new(node1_pos, Vec3::ZERO, sphere_rad);
+    let node2 = Node::new(node2_pos, Vec3::ZERO, sphere_rad);
 
-    let link = Link::new(2., 5., 0.2, &node2, &node1);
-
-    // i create a node and then give a reference to it to link but after this function, node is dropped. or rather
-    // its ownership is transferred to bundled.
-
-    // https://github.com/bevyengine/bevy/discussions/13309
-    // https://docs.rs/bevy/latest/bevy/ecs/component/trait.Component.html
-    // in above link, components must always satisfy 'static trait bound.
-
-    // ECS = entity component and system.
-    // this creates an entity i.e object with the given components.
-    // entities are just unique IDs or references that point to the components. 
-    // see this video, think you might be going at this from an OOP perspective and not an ECS perspective. 
-    // https://www.youtube.com/watch?v=B6ZFuYYZCSY
-    // DATA in COMPONENTs, BEHAVIOR in SYSTEMs.
-    // there is some kind of id function and maybe we just loop through and check the ID of the node.
-    // seems super slow though but apparently the .get method has constant time complexity.
-    // https://gamedev.stackexchange.com/questions/204007/in-bevy-ecs-what-is-a-good-way-to-have-entities-reference-each-other
-
-    commands.spawn(
+    let node1_ent = commands.spawn(
         (
             PbrBundle {
                 mesh: meshes.add(node1.mesh.clone()), // not ideal
@@ -103,9 +103,9 @@ pub fn create_spring(
             },
             node1 
         )
-    );
+    ).id();
 
-    commands.spawn(
+    let node2_ent = commands.spawn(
         (
             PbrBundle {
                 mesh: meshes.add(node2.mesh.clone()), 
@@ -115,14 +115,50 @@ pub fn create_spring(
             },
             node2
         )
-    );
+    ).id();
+
+    let length = (node1_pos - node2_pos).length();
+
+    let link = Link::new(2., length, 0.2, node1_ent, node2_ent);
+
+    
+    
+    // Link position is set by the center
+    // need to figure out rotation
+    // with the nodes in one axis, we can do node2 - node1 + node2
+    
+    let dir =  node1_pos - node2_pos;
+    let length = dir.length();
+    let res = dir.normalize()*(length/2.) + node2_pos;
+
+    // let mut link_trans = Transform::from_translation(res);
+    // link_trans.rotate(Quat::from_rotation_arc(Vec3::Z, dir));
+
+    // get a rotation matrix to align to vectors. convert to quart. pass in quart.
+
+    let mut link_trans = Transform::from_translation(res);
+    // we let the forward axis by the axis that is aligned to the long direction of the rod
+    // this is enforced by xyz vector we pass in when making the cuboid which is girth, girth, -length respectively
+    link_trans.rotate(Quat::from_rotation_arc(link_trans.forward().xyz(), dir.normalize()));
+
+
+    // let mat = Mat3 { x_axis: (), y_axis: (), z_axis: () }
+
+    // link_trans.rotate(Quat::from_mat3(mat));
+
+
+
+
+    
+    
+    println!("diff {:?}, pos1 {:?}, pos2 {:?}", dir, node1_pos, node2_pos);
 
     commands.spawn(
         (
             PbrBundle { 
                 mesh: meshes.add(link.mesh.clone()),
                 material: materials.add(Color::YELLOW),
-                transform: Transform::from_translation(node2.pos - node1.pos),
+                transform: link_trans,
                 ..default()
             },
             link

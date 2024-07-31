@@ -128,19 +128,33 @@ fn create_coord_system(
 
 /// Create a light in the scene
 fn create_light(commands: &mut Commands) {
+
+    let pos:f32 = 3.0;
+
     // Light
-    let point_light = PointLight {
-        shadows_enabled: true,
-        intensity: 1_300_000.0,
-        range: 100.0,
+    let point_light_bundle_1 = PointLightBundle {
+        point_light: PointLight {
+            shadows_enabled: true,
+            ..default()
+        },
+        transform: Transform::from_xyz(pos, pos, pos),
         ..default()
     };
 
-    let point_light_bundle = PointLightBundle {
-        point_light: point_light,
-        transform: Transform::from_xyz(4.0, 8.0, 4.0),
+    let point_light_bundle_2 = PointLightBundle {
+        point_light: PointLight {
+            shadows_enabled: true,
+            ..default()
+        },
+        transform: Transform::from_xyz(-pos, -pos, -pos),
         ..default()
     };
 
-    commands.spawn(point_light_bundle);
+    commands.spawn(point_light_bundle_1);
+    commands.spawn(point_light_bundle_2);
+
+    // commands.insert_resource(AmbientLight {
+    //     color: Color::WHITE.into(),
+    //     brightness:500.,
+    // });
 }
