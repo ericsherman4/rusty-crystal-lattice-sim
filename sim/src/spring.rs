@@ -1,5 +1,10 @@
-use bevy::{ecs::query, prelude::*};
+use bevy::{prelude::*};
 use rand::prelude::*;
+
+
+//////////////////////////////////////////////////
+/// NODE
+//////////////////////////////////////////////////
 
 #[derive(Component)]
 pub struct Node
@@ -21,8 +26,10 @@ impl Node {
     }
 }
 
+//////////////////////////////////////////////////
+/// LINK
+//////////////////////////////////////////////////
 #[derive(Component)]
-
 pub struct Link{
     spring_const: f32,
     orig_length: f32,
@@ -30,8 +37,6 @@ pub struct Link{
     pub from: Entity,
     mesh: Mesh, 
 }
-
-
 
 impl Link{
     // from denotes from which node the link is connected and 
@@ -50,23 +55,18 @@ impl Link{
     }
 }
 
-// maybe can make a custom mesh to solve this but this is easier
-// https://www.christopherbiscardi.com/why-do-bevy-sprites-spawn-with-the-center-at-0-0
-// fn set_cuboid_pos_by_end(target_position: Vec3, length_in_dir: f32, dir: CuboidOffsetDir) -> Vec3
-// {
-//     // By default, it sets it based on origin.
-//     // Returns a modified transform that will place the cuboid correctly.
-//     match dir {
-//         CuboidOffsetDir::Y => Vec3::new(target_position.x, target_position.y + length_in_dir/2.0, target_position.z),
-//         _ => Vec3::default(),
-//     }
-// }
-
+//////////////////////////////////////////////////
+/// HELPER FUNCTIONS
+//////////////////////////////////////////////////
 
 fn get_rand_num(rng: &mut ThreadRng) -> f32 {
     rng.gen_range(-10.0..10.0)
 }
 
+
+//////////////////////////////////////////////////
+/// SPRING SYSTEMS
+//////////////////////////////////////////////////
 
 pub fn create_spring(
     commands: &mut Commands, 
@@ -168,17 +168,46 @@ pub fn create_spring(
 
 }
 
-// lets start by fixing node1 and only doing node2 
-// F = -k(delta X (from nominal))
-// a = F /m
-// v = v_i + a * dt
-// x = x_i + v * dt
-// pub fn animate_spring(time: Res<Time>, mut query: Query<&mut Transform, With<Node>>) {
+/// Insert a spring into the scene
+pub fn insert_spring(
+    time: Res<Time>,
+    mut commands: Commands,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+) {
+    create_spring(&mut commands, &mut meshes, &mut materials);
+    println!("Time is {}", time.elapsed().as_secs())
+}
+
+/// Update the springs position
+pub fn update_spring(
+    mut query : Query<(&mut Transform, &Link), Without<Node>>,
+    mut nodes: Query<(Entity, &mut Node, &mut Transform),  Without<Link>>
+) {
+
+    let mut rng = rand::thread_rng();
     
+    for (mut transform, link) in query.iter_mut() {
+        let new_node1_pos = Vec3 {x: rng.gen_range(-10.0..10.0), y: rng.gen_range(-10.0..10.0), z: rng.gen_range(-10.0..10.0) };
+        let new_node2_pos = Vec3 {x: rng.gen_range(-10.0..10.0), y: rng.gen_range(-10.0..10.0), z: rng.gen_range(-10.0..10.0) };
 
-    
-//     for mut transform in &mut query {
+        let (_,_,mut node1) = nodes.get_mut(link.to).expect("help");
+        node1.translation = new_node1_pos;
 
-//     }
+        let (_,_,mut node2) = nodes.get_mut(link.from).expect("help");
+        node2.translation = new_node2_pos;
 
-// }
+        let dir =  new_node1_pos - new_node2_pos;
+        let length = dir.length();
+        let res = dir.normalize()*(length/2.) + new_node2_pos;
+
+
+        // this applies to link
+        transform.translation =  res;
+        let fwd = transform.forward().xyz();
+        transform.rotate(Quat::from_rotation_arc(fwd, dir.normalize()));
+
+    }
+}
+
+
