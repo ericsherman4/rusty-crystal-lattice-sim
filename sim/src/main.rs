@@ -1,9 +1,8 @@
-use bevy::{prelude::*};
-use rand::Rng;
+use bevy::prelude::*;
 use std::time::Duration;
 
-mod spring;
 mod scene;
+mod spring;
 
 // https://docs.rs/smooth-bevy-cameras/0.11.0/smooth_bevy_cameras/
 // https://github.com/bonsairobo/smooth-bevy-cameras/blob/main/examples/simple_unreal.rs
@@ -18,25 +17,18 @@ fn main() {
             LookTransformPlugin,
             UnrealCameraPlugin::default(),
         ))
-
         // This lets you run an update at some interval. Not sure how to make multiple of them
         // I think these just apply to FixedUpdate schedule.
         // Example: https://github.com/bevyengine/bevy/blob/latest/examples/time/time.rs
         .insert_resource(Time::<Fixed>::from_duration(Duration::from_millis(1500)))
-        
         // Draw the initial scene
         .add_systems(Startup, scene::setup)
-
         // not currently working
-        .add_systems(Update, scene::camera_reset_control) 
-
+        .add_systems(Update, scene::camera_reset_control)
         // Insert a spring into the scene
         .add_systems(Startup, spring::insert_spring)
-
         // Update the spring's loc via transforms.
         .add_systems(FixedUpdate, spring::update_spring)
-
         // Run it
         .run()
 }
-
