@@ -21,8 +21,15 @@ pub fn setup(
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
     create_light(&mut commands);
-    create_coord_system(&mut commands, &mut meshes, &mut materials);
     create_cameras(&mut commands);
+}
+
+pub fn draw_xyz (
+    mut commands: Commands,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+) {
+    create_coord_system(&mut commands, &mut meshes, &mut materials);
 }
 
 /// Handle keyboard input relating to the camera

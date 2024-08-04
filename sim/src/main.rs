@@ -1,4 +1,5 @@
 use bevy::prelude::*;
+use spring::generate_lattice;
 use std::time::Duration;
 
 mod scene;
@@ -23,10 +24,13 @@ fn main() {
         .insert_resource(Time::<Fixed>::from_duration(Duration::from_millis(1500)))
         // Draw the initial scene
         .add_systems(Startup, scene::setup)
+        // .add_systems(Startup, scene::draw_xyz)
+        // Generate a lattice structure
+        .add_systems(Startup, spring::generate_lattice)
         // not currently working
         .add_systems(Update, scene::camera_reset_control)
         // Insert a spring into the scene
-        .add_systems(Startup, spring::insert_spring)
+        // .add_systems(Startup, spring::insert_spring)
         // Update the spring's loc via transforms.
         .add_systems(FixedUpdate, spring::update_spring)
         // Run it
