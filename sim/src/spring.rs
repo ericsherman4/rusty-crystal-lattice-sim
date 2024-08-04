@@ -55,6 +55,7 @@ impl Link {
 
     // cant do this cause when i call this function and pass the result.mesh() to the add function,
     // link ownership is transferred and then I can't use link after. Don't know how to fix.
+    // this is because self is wrong, should be &self.
     fn create_cuboid(self, girth: f32) -> Cuboid {
         Cuboid::new(girth, girth, -self.orig_length)
     }
@@ -64,7 +65,7 @@ impl Link {
 /// LATTICE
 //////////////////////////////////////////////////
 
-const LATTICE_DIM: u32 = 1;
+const LATTICE_DIM: u32 = 3;
 const LATTICE_STARTING_LINK_LEN: f32 = 3.;
 const LATTICE_NODE_RADIUS: f32 = 0.1;
 const LATTICE_LINK_RADIUS: f32 = 0.1;
@@ -99,7 +100,10 @@ fn calc_num_lattice_links(dim: u32) -> u32 {
 
 struct LatticeNodes{
     dim: u32,
-    data: Vec<Entity>
+    data: Vec<Entity>,
+    link_counter: Vec<u8>,
+    max_link_count: Vec<u8>,
+
 }
 
 impl LatticeNodes {
@@ -111,10 +115,17 @@ impl LatticeNodes {
     // dont make a link
 
     fn new(dim: u32) -> Self {
+        let total_nodes = calc_num_lattice_nodes(dim) as usize;
         Self {
-            dim,
-            data: Vec::with_capacity(dim as usize),
+            dim: dim +1,
+            data: Vec::with_capacity(total_nodes),
+            link_counter: vec![0; total_nodes],
+            max_link_count: vec![0; total_nodes],
         }
+    }
+
+    fn get_data_idx(&self, x:u32, y: u32, z:u32) -> usize {
+        (z*self.dim*self.dim + y*self.dim + x) as usize
     }
 
     // this has fucked me up a lot.
@@ -122,12 +133,29 @@ impl LatticeNodes {
     // so u need the arg to be reference or mutable reference
     // fn get(&self,x:i32, y:i32, z:i32) -> Entity {
     // you can unpack a struct into components and pass it in as argument
-    fn get(&self, UVec3 {x, y, z}: UVec3) -> Entity {
+    fn get(&mut self, UVec3 {x, y, z}: UVec3) -> Entity {
         assert!(x <= (self.dim + 1));
         assert!(y <= (self.dim + 1));
         assert!(z <= (self.dim + 1));
-        println!("{} {} {}", x,y,z);
-        self.data[(z*self.dim*self.dim + y*self.dim + x) as usize]
+        println!("accessing {} {} {}", x,y,z);
+        
+        let idx = self.get_data_idx(x, y, z);
+        self.link_counter[idx] += 1;
+        self.data[idx]
+    }
+
+    fn set_max_links_for_node(&mut self, UVec3 {x, y, z}: UVec3, max_links_for_node: u8) {
+        let idx = self.get_data_idx(x, y, z);
+        println!("in function, index is: {}", idx);
+        self.max_link_count[idx] = max_links_for_node;
+    }
+
+    fn is_node_full(&self, UVec3 {x, y, z}: UVec3) -> bool {
+        assert!(x <= (self.dim + 1));
+        assert!(y <= (self.dim + 1));
+        assert!(z <= (self.dim + 1));
+        let idx = self.get_data_idx(x, y, z);
+        self.link_counter[idx] == self.max_link_count[idx]
     }
 
     fn add(&mut self, node: Entity) {
@@ -145,14 +173,30 @@ pub fn generate_lattice(
     mut meshes:  ResMut<Assets<Mesh>>,
     mut materials:  ResMut<Assets<StandardMaterial>>,
 ) {
+    let dir_arr = [
+        IVec3::new(1, 0, 0),
+        // IVec3::new(-1, 0, 0),
+        IVec3::new(0, 1, 0),
+        // IVec3::new(0, -1, 0),
+        IVec3::new(0, 0, 1),
+        // IVec3::new(0, 0, -1),
+        IVec3::new(1, 1, 0),
+        IVec3::new(1, -1, 0),
+        // IVec3::new(-1, 1, 0),
+        // IVec3::new(-1, -1, 0),
+        IVec3::new(0, 1, 1),
+        // IVec3::new(0, -1, 1),
+        IVec3::new(0, 1, -1),
+        // IVec3::new(0, -1, -1),
+        IVec3::new(1, 0, 1),
+        // IVec3::new(1, 0, -1),
+        IVec3::new(-1, 0, 1),
+        // IVec3::new(-1, 0, -1),
+    ];
+
     let num_nodes = calc_num_lattice_nodes(LATTICE_DIM);
     let num_links = calc_num_lattice_links(LATTICE_DIM);
     let nodes_dim = LATTICE_DIM +1;
-
-    // have a 3d array of nodes? 
-    // let nodes = [Node::new(Vec3::ZERO, Vec3::ZERO, 1.0); calc_num_lattice_nodes(dim)];
-    // let nodes: [Node; num_nodes] = from_fn(|_| Node::new(Vec3::ZERO, Vec3::ZERO, LATTICE_RAD));
-
     let mut node_data = LatticeNodes::new(LATTICE_DIM);
 
     // fill out and spawn all the nodes
@@ -179,30 +223,43 @@ pub fn generate_lattice(
                     ))
                     .id()
                 );
+
+                // Determine max number of links for the node
+                let mut link_count = 0;
+                for dir in dir_arr {
+
+                    let to_node_pos = IVec3 {
+                        x: x as i32 + dir.x,
+                        y: y as i32 + dir.y,
+                        z: z as i32 + dir.z,
+                    };
+
+                    if to_node_pos.x < 0 || to_node_pos.x >= nodes_dim as i32 
+                        || to_node_pos.y < 0 || to_node_pos.y >= nodes_dim as i32 
+                        || to_node_pos.z < 0 || to_node_pos.z >= nodes_dim as i32
+                    {
+                        // println!("rejecting {:?}", to_node_pos);
+                        continue;
+                    }
+                    else {
+                        println!("adding to count for {:?} at index {}, this is valid: {:?}", 
+                            UVec3{x,y,z}, 
+                            (z*nodes_dim*nodes_dim + y*nodes_dim + x) as usize, 
+                            to_node_pos);
+                        link_count +=1;
+                    }
+                }
+                
+                node_data.set_max_links_for_node(UVec3 {x,y,z}, link_count);
             }
         }
     }
 
-    let dir_arr = [
-        IVec3::new(1, 0, 0),
-        IVec3::new(-1, 0, 0),
-        IVec3::new(0, 1, 0),
-        IVec3::new(0, -1, 0),
-        IVec3::new(0, 0, 1),
-        IVec3::new(0, 0, -1),
-        IVec3::new(1, 1, 0),
-        IVec3::new(1, -1, 0),
-        IVec3::new(-1, 1, 0),
-        IVec3::new(-1, -1, 0),
-        IVec3::new(0, 1, 1),
-        IVec3::new(0, -1, 1),
-        IVec3::new(0, 1, -1),
-        IVec3::new(0, -1, -1),
-        IVec3::new(1, 0, 1),
-        IVec3::new(1, 0, -1),
-        IVec3::new(-1, 0, 1),
-        IVec3::new(-1, 0, -1),
-    ];
+    println!("{:?}", node_data.max_link_count);
+
+    assert_eq!((nodes_dim*nodes_dim*nodes_dim) as usize, node_data.data.len());
+
+
 
     let mut counter: u32 = 0;
     // fill out and spawn all links
@@ -223,11 +280,15 @@ pub fn generate_lattice(
                         || to_node_pos.y < 0 || to_node_pos.y >= nodes_dim as i32 
                         || to_node_pos.z < 0 || to_node_pos.z >= nodes_dim as i32
                     {
-                        continue
+                        continue;
                     }
 
+                    // if node_data.is_node_full(UVec3{x,y,z}) {
+                    //     continue;
+                    // }
+
                     // TODO: broken because I am connecting links twice.
-                    println!("getting node {:?}. input dir is {:?}", to_node_pos, dir);
+                    println!("getting node {:?}. input dir is {:?}. current pos is {:?}", to_node_pos, dir, UVec3{x,y,z});
                     let to_node = node_data.get(to_node_pos.as_uvec3());
                     let from_node = node_data.get(UVec3 {x, y, z});
 
@@ -253,7 +314,8 @@ pub fn generate_lattice(
         }
     }
     //TODO: put back
-    // assert_eq!(counter, num_links);
+    println!("number of springs generated is {counter} and expected was {num_links}");
+    assert_eq!(counter, num_links);
 
 
 }
@@ -399,7 +461,7 @@ pub fn update_spring(
 
         // this applies to link
         transform.translation = res;
-        let fwd = transform.forward().xyz();
+        let fwd = transform.forward().xyz().normalize();
         transform.rotate(Quat::from_rotation_arc(fwd, dir.normalize()));
     }
 }
