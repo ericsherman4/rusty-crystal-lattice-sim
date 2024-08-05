@@ -23,3 +23,11 @@ https://docs.rs/bevy_ecs/latest/bevy_ecs/world/struct.World.html#method.spawn_em
 it would be great to define the x y z and direction of how many nodes you want. 
 that way, should be really easy to directly make a cloth simulation as well? 
 You will need to implement gravity and also the anchoring of certain nodes as well.
+
+# Keyboard triggered force things
+like the odesza music video, there are like these force explosions / implosions,
+it would be cool to like spawn those temporarily in the center of the cube.
+
+## General rust things
+in vs code, there is a setting for inlay hints which u can tweak when they show up
+use control +alt to show the hints

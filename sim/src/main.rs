@@ -1,5 +1,4 @@
 use bevy::prelude::*;
-use spring::generate_lattice;
 use std::time::Duration;
 
 mod scene;
