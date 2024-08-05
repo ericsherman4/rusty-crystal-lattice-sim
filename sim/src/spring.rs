@@ -30,7 +30,7 @@ impl Node {
     }
 
     /// Create the mesh for the node
-    fn create_mesh(&self ) -> Mesh {
+    fn create_mesh(&self) -> Mesh {
         Sphere::new(LATTICE_NODE_RADIUS).mesh().uv(32, 18)
     }
 }
@@ -48,7 +48,6 @@ pub struct Link {
 }
 
 impl Link {
-    
     /// Create a new link
     /// From denotes from which node the link is connected and
     /// to denotes to which node the link is connected
@@ -59,7 +58,7 @@ impl Link {
             spring_const,
             orig_length,
             to,
-            from,           
+            from,
         }
     }
 
@@ -73,18 +72,17 @@ impl Link {
 /// LATTICE
 //////////////////////////////////////////////////
 
-struct LatticeNodes{
+struct LatticeNodes {
     dim: u32,
     data: Vec<Entity>,
 }
 
 impl LatticeNodes {
-
     // this has fucked me up a lot.
     // if you pass in self, then when u call this function, ownership will be transferred?
     // so u need the arg to be reference or mutable reference
 
-    /// Creates a data struct that holds all of the nodes so that during lattice 
+    /// Creates a data struct that holds all of the nodes so that during lattice
     /// generation, links can query them.
     /// Dim is the number of "1x1x1 cubes" on one side of the cube lattice.
     fn new(dim: u32) -> Self {
@@ -98,12 +96,12 @@ impl LatticeNodes {
     }
 
     /// Get the data from the array given xyz index in the lattice.
-    fn get_data_idx(&self, x:u32, y: u32, z:u32) -> usize {
-        (z*self.dim*self.dim + y*self.dim + x) as usize
+    fn get_data_idx(&self, x: u32, y: u32, z: u32) -> usize {
+        (z * self.dim * self.dim + y * self.dim + x) as usize
     }
 
     /// Get the entity given the xyz index in the lattice.
-    fn get(&mut self, UVec3 {x, y, z}: UVec3) -> Entity {
+    fn get(&mut self, UVec3 { x, y, z }: UVec3) -> Entity {
         debug_assert!(x <= (self.dim + 1));
         debug_assert!(y <= (self.dim + 1));
         debug_assert!(z <= (self.dim + 1));
@@ -118,111 +116,121 @@ impl LatticeNodes {
     }
 }
 
-
 //////////////////////////////////////////////////
 /// HELPER FUNCTIONS
 //////////////////////////////////////////////////
 
-/// Get number of nodes in a lattice given dim. 
+/// Get number of nodes in a lattice given dim.
 /// Dim is the number of "1x1x1 cubes" on one side of the cube lattice.
-fn calc_num_lattice_nodes(dim: u32) -> u32{ 
+fn calc_num_lattice_nodes(dim: u32) -> u32 {
     debug_assert!(dim > 0);
-    match u32::checked_pow(dim+1,3) {
+    match u32::checked_pow(dim + 1, 3) {
         None => panic!("overflow while calculating number of lattice nodes"),
-        Some(val) => val
+        Some(val) => val,
     }
 }
 
-/// Get number of links in a lattice given dim. 
+/// Get number of links in a lattice given dim.
 /// Dim is the number of "1x1x1 cubes" on one side of the cube lattice.
 fn calc_num_lattice_links(dim: u32) -> u32 {
     debug_assert!(dim > 0);
-    match u32::checked_mul(3*dim*(dim + 1), 3*dim+1) {
+    match u32::checked_mul(3 * dim * (dim + 1), 3 * dim + 1) {
         None => panic!("overflow while calculating number of lattice links"),
-        Some(val) => val
+        Some(val) => val,
     }
 }
 
-// TODO: maybe this function could just be absorbed into lattice nodes and 
+// TODO: maybe this function could just be absorbed into lattice nodes and
 // then it just returns an object to generate_lattice.
 /// Spawn all of the nodes into the environment and store them
 /// in the latticenodes struct
 fn create_all_nodes(
-     lattice_nodes: &mut LatticeNodes, 
-     commands: &mut Commands,
-     meshes: &mut  ResMut<Assets<Mesh>>,
-     materials: &mut  ResMut<Assets<StandardMaterial>>
+    lattice_nodes: &mut LatticeNodes,
+    commands: &mut Commands,
+    meshes: &mut ResMut<Assets<Mesh>>,
+    materials: &mut ResMut<Assets<StandardMaterial>>,
 ) {
-    let nodes_dim = LATTICE_DIM +1;
+    let nodes_dim = LATTICE_DIM + 1;
 
     for z in 0..nodes_dim {
         for y in 0..nodes_dim {
             for x in 0..nodes_dim {
                 // TODO: provide randomized vel.
                 let starting_pos = Vec3::new(
-                    x as f32* LATTICE_STARTING_LINK_LEN, 
-                    y as f32 * LATTICE_STARTING_LINK_LEN, 
+                    x as f32 * LATTICE_STARTING_LINK_LEN,
+                    y as f32 * LATTICE_STARTING_LINK_LEN,
                     z as f32 * LATTICE_STARTING_LINK_LEN,
                 );
                 let node1 = Node::new(starting_pos, Vec3::ZERO);
                 lattice_nodes.add(
-                    commands.spawn((
-                        PbrBundle {
-                            mesh: meshes.add(node1.create_mesh()), // not ideal
-                            material: materials.add(Color::WHITE),
-                            transform: Transform::from_translation(node1.pos.clone()),
-                            ..default()
-                        },
-                        node1,
-                    ))
-                    .id()
+                    commands
+                        .spawn((
+                            PbrBundle {
+                                mesh: meshes.add(node1.create_mesh()), // not ideal
+                                material: materials.add(Color::WHITE),
+                                transform: Transform::from_translation(node1.pos.clone()),
+                                ..default()
+                            },
+                            node1,
+                        ))
+                        .id(),
                 );
             }
         }
     }
 
-    debug_assert_eq!((calc_num_lattice_nodes(LATTICE_DIM)) as usize, lattice_nodes.data.len());
+    debug_assert_eq!(
+        (calc_num_lattice_nodes(LATTICE_DIM)) as usize,
+        lattice_nodes.data.len()
+    );
 }
-
 
 //////////////////////////////////////////////////
 /// SPRING SYSTEMS
 //////////////////////////////////////////////////
 
-pub fn generate_lattice(    
+pub fn generate_lattice(
     mut commands: Commands,
-    mut meshes:  ResMut<Assets<Mesh>>,
-    mut materials:  ResMut<Assets<StandardMaterial>>,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
     // Turns out, you don't need all the directions cause you
     // are only constructing the cube in one direction.
     // This gets rid of duplicates.
     let dir_arr = [
-        IVec3::new(1, 0, 0), IVec3::new(0, 1, 0), IVec3::new(0, 0, 1),
-        IVec3::new(1, 1, 0), IVec3::new(0, 1, 1), IVec3::new(1, 0, 1),
-        IVec3::new(1, -1, 0), IVec3::new(0, 1, -1), IVec3::new(-1, 0, 1),
+        IVec3::new(1, 0, 0),
+        IVec3::new(0, 1, 0),
+        IVec3::new(0, 0, 1),
+        IVec3::new(1, 1, 0),
+        IVec3::new(0, 1, 1),
+        IVec3::new(1, 0, 1),
+        IVec3::new(1, -1, 0),
+        IVec3::new(0, 1, -1),
+        IVec3::new(-1, 0, 1),
     ];
-    
+
     // Generate all of the nodes first
     let mut node_data = LatticeNodes::new(LATTICE_DIM);
     create_all_nodes(&mut node_data, &mut commands, &mut meshes, &mut materials);
 
     // fill out and spawn all links
-    let nodes_dim = LATTICE_DIM +1;
+    let nodes_dim = LATTICE_DIM + 1;
     let mut counter: u32 = 0;
     for z in 0..nodes_dim {
         for y in 0..nodes_dim {
-            for x in 0..nodes_dim { 
-                // need to check 18 directions 
+            for x in 0..nodes_dim {
+                // need to check 18 directions
                 for dir in dir_arr {
-
                     // TODO: this u32 and i32 conversions are messy
-                    let lattice_node_pos = UVec3 {x,y,z};
+                    let lattice_node_pos = UVec3 { x, y, z };
                     let to_node_pos = lattice_node_pos.as_ivec3() + dir;
 
-                    if to_node_pos.x < 0 || to_node_pos.x >= nodes_dim as i32 
-                        || to_node_pos.y < 0 || to_node_pos.y >= nodes_dim as i32 
-                        || to_node_pos.z < 0 || to_node_pos.z >= nodes_dim as i32
+                    if to_node_pos.x < 0
+                        || to_node_pos.x >= nodes_dim as i32
+                        || to_node_pos.y < 0
+                        || to_node_pos.y >= nodes_dim as i32
+                        || to_node_pos.z < 0
+                        || to_node_pos.z >= nodes_dim as i32
                     {
                         continue;
                     }
@@ -237,7 +245,7 @@ pub fn generate_lattice(
                             mesh: meshes.add(link.create_mesh()),
                             material: materials.add(Color::BLUE),
                             transform: Transform::from_translation(
-                                lattice_node_pos.as_vec3() * LATTICE_STARTING_LINK_LEN
+                                lattice_node_pos.as_vec3() * LATTICE_STARTING_LINK_LEN,
                             ),
                             ..default()
                         },
@@ -251,10 +259,9 @@ pub fn generate_lattice(
     }
 
     let num_links = calc_num_lattice_links(LATTICE_DIM);
-    println!("number of springs generated is {counter} and expected was {num_links}", );
+    println!("number of springs generated is {counter} and expected was {num_links}",);
     debug_assert_eq!(counter, num_links);
 }
-
 
 /// Update the springs position
 pub fn update_spring(
@@ -262,8 +269,12 @@ pub fn update_spring(
     nodes: Query<(Entity, &mut Node, &mut Transform), Without<Link>>,
 ) {
     for (mut transform, link) in query.iter_mut() {
-        let (_, _, node1) = nodes.get(link.to).expect("The node should exist as no nodes are ever despawned.");
-        let (_, _, node2) = nodes.get(link.from).expect("The node should exist as no nodes are ever despawned.");
+        let (_, _, node1) = nodes
+            .get(link.to)
+            .expect("The node should exist as no nodes are ever despawned.");
+        let (_, _, node2) = nodes
+            .get(link.from)
+            .expect("The node should exist as no nodes are ever despawned.");
         let dir = node1.translation - node2.translation;
         let length = dir.length();
         let res = dir.normalize() * (length / 2.) + node2.translation;

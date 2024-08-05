@@ -24,7 +24,7 @@ pub fn setup(
     create_cameras(&mut commands);
 }
 
-pub fn draw_xyz (
+pub fn draw_xyz(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
