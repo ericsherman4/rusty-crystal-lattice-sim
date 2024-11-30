@@ -1,10 +1,9 @@
 use bevy::prelude::*;
 use std::time::Duration;
 
+mod config;
 mod scene;
-mod spring;
-
-pub mod colors;
+mod spring; // this always me to do use create::config::colors in other files in this folder
 
 // https://docs.rs/smooth-bevy-cameras/0.11.0/smooth_bevy_cameras/
 // https://github.com/bonsairobo/smooth-bevy-cameras/blob/main/examples/simple_unreal.rs

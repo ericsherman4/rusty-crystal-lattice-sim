@@ -1,15 +1,6 @@
+use crate::config::colors;
+use crate::config::lattice;
 use bevy::prelude::*;
-
-use crate::colors;
-
-//////////////////////////////////////////////////
-/// CONSTS
-//////////////////////////////////////////////////
-
-const LATTICE_DIM: u32 = 3;
-const LATTICE_STARTING_LINK_LEN: f32 = 3.;
-const LATTICE_NODE_RADIUS: f32 = 0.1;
-const LATTICE_LINK_RADIUS: f32 = 0.1;
 
 //////////////////////////////////////////////////
 /// NODE
@@ -33,7 +24,7 @@ impl Node {
 
     /// Create the mesh for the node
     fn create_mesh(&self) -> Mesh {
-        Sphere::new(LATTICE_NODE_RADIUS).mesh().uv(32, 18)
+        Sphere::new(lattice::NODE_RADIUS).mesh().uv(32, 18)
     }
 }
 
@@ -66,9 +57,13 @@ impl Link {
 
     /// Create the mesh for the link
     fn create_mesh(&self) -> Mesh {
-        Cuboid::new(LATTICE_LINK_RADIUS, LATTICE_LINK_RADIUS, -self.orig_length)
-            .mesh()
-            .into()
+        Cuboid::new(
+            lattice::LINK_RADIUS,
+            lattice::LINK_RADIUS,
+            -self.orig_length,
+        )
+        .mesh()
+        .into()
     }
 }
 
@@ -154,16 +149,16 @@ fn create_all_nodes(
     meshes: &mut ResMut<Assets<Mesh>>,
     materials: &mut ResMut<Assets<StandardMaterial>>,
 ) {
-    let nodes_dim = LATTICE_DIM + 1;
+    let nodes_dim = lattice::DIM + 1;
 
     for z in 0..nodes_dim {
         for y in 0..nodes_dim {
             for x in 0..nodes_dim {
                 // TODO: provide randomized vel.
                 let starting_pos = Vec3::new(
-                    x as f32 * LATTICE_STARTING_LINK_LEN,
-                    y as f32 * LATTICE_STARTING_LINK_LEN,
-                    z as f32 * LATTICE_STARTING_LINK_LEN,
+                    x as f32 * lattice::STARTING_LINK_LEN,
+                    y as f32 * lattice::STARTING_LINK_LEN,
+                    z as f32 * lattice::STARTING_LINK_LEN,
                 );
                 let node1 = Node::new(starting_pos, Vec3::ZERO);
                 lattice_nodes.add(
@@ -184,7 +179,7 @@ fn create_all_nodes(
     }
 
     debug_assert_eq!(
-        (calc_num_lattice_nodes(LATTICE_DIM)) as usize,
+        (calc_num_lattice_nodes(lattice::DIM)) as usize,
         lattice_nodes.data.len()
     );
 }
@@ -214,11 +209,11 @@ pub fn generate_lattice(
     ];
 
     // Generate all of the nodes first
-    let mut node_data = LatticeNodes::new(LATTICE_DIM);
+    let mut node_data = LatticeNodes::new(lattice::DIM);
     create_all_nodes(&mut node_data, &mut commands, &mut meshes, &mut materials);
 
     // fill out and spawn all links
-    let nodes_dim = LATTICE_DIM + 1;
+    let nodes_dim = lattice::DIM + 1;
     let mut counter: u32 = 0;
     for z in 0..nodes_dim {
         for y in 0..nodes_dim {
@@ -243,13 +238,13 @@ pub fn generate_lattice(
                     let to_node = node_data.get(to_node_pos.as_uvec3());
                     let from_node = node_data.get(lattice_node_pos);
 
-                    let link = Link::new(2., LATTICE_STARTING_LINK_LEN, to_node, from_node);
+                    let link = Link::new(2., lattice::STARTING_LINK_LEN, to_node, from_node);
                     commands.spawn((
                         PbrBundle {
                             mesh: meshes.add(link.create_mesh()),
                             material: materials.add(colors::BLUE),
                             transform: Transform::from_translation(
-                                lattice_node_pos.as_vec3() * LATTICE_STARTING_LINK_LEN,
+                                lattice_node_pos.as_vec3() * lattice::STARTING_LINK_LEN,
                             ),
                             ..default()
                         },
@@ -262,7 +257,7 @@ pub fn generate_lattice(
         }
     }
 
-    let num_links = calc_num_lattice_links(LATTICE_DIM);
+    let num_links = calc_num_lattice_links(lattice::DIM);
     println!("number of springs generated is {counter} and expected was {num_links}",);
     debug_assert_eq!(counter, num_links);
 }

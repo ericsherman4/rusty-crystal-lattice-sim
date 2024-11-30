@@ -1,10 +1,8 @@
+use crate::config::colors;
 use bevy::prelude::*;
+use smooth_bevy_cameras::controllers::unreal::{UnrealCameraBundle, UnrealCameraController};
 use strum::IntoEnumIterator;
 use strum_macros::EnumIter;
-
-use smooth_bevy_cameras::controllers::unreal::{UnrealCameraBundle, UnrealCameraController};
-
-use crate::colors;
 
 #[derive(EnumIter)]
 enum Axis {
