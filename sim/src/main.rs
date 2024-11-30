@@ -4,6 +4,8 @@ use std::time::Duration;
 mod scene;
 mod spring;
 
+pub mod colors;
+
 // https://docs.rs/smooth-bevy-cameras/0.11.0/smooth_bevy_cameras/
 // https://github.com/bonsairobo/smooth-bevy-cameras/blob/main/examples/simple_unreal.rs
 use smooth_bevy_cameras::controllers::unreal::UnrealCameraPlugin;
@@ -23,7 +25,7 @@ fn main() {
         .insert_resource(Time::<Fixed>::from_duration(Duration::from_millis(1500)))
         // Draw the initial scene
         .add_systems(Startup, scene::setup)
-        // .add_systems(Startup, scene::draw_xyz)
+        .add_systems(Startup, scene::draw_xyz)
         // Generate a lattice structure
         .add_systems(Startup, spring::generate_lattice)
         // not currently working
@@ -33,5 +35,5 @@ fn main() {
         // Update the spring's loc via transforms.
         .add_systems(FixedUpdate, spring::update_spring)
         // Run it
-        .run()
+        .run();
 }

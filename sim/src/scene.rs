@@ -4,6 +4,8 @@ use strum_macros::EnumIter;
 
 use smooth_bevy_cameras::controllers::unreal::{UnrealCameraBundle, UnrealCameraController};
 
+use crate::colors;
+
 #[derive(EnumIter)]
 enum Axis {
     X,
@@ -17,8 +19,8 @@ pub struct MyCamera;
 /// Setup scene / environment
 pub fn setup(
     mut commands: Commands,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
+    // mut meshes: ResMut<Assets<Mesh>>,
+    // mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
     create_light(&mut commands);
     create_cameras(&mut commands);
@@ -89,17 +91,17 @@ fn create_axis(
         Axis::X => {
             cuboid_dim = Vec3::new(LENGTH, GIRTH, GIRTH);
             adjusted_position = Vec3::new(LENGTH / 2., 0., 0.);
-            color = Color::RED;
+            color = colors::RED;
         }
         Axis::Y => {
             cuboid_dim = Vec3::new(GIRTH, LENGTH, GIRTH);
             adjusted_position = Vec3::new(0., LENGTH / 2., 0.);
-            color = Color::GREEN;
+            color = colors::GREEN
         }
         Axis::Z => {
             cuboid_dim = Vec3::new(GIRTH, GIRTH, LENGTH);
             adjusted_position = Vec3::new(0., 0., LENGTH / 2.);
-            color = Color::BLUE;
+            color = colors::BLUE;
         }
     }
 
