@@ -1,5 +1,4 @@
-use crate::config::colors;
-use crate::config::lattice;
+use crate::config::{colors_config,lattice_config};
 use bevy::prelude::*;
 
 //////////////////////////////////////////////////
@@ -24,7 +23,7 @@ impl Node {
 
     /// Create the mesh for the node
     fn create_mesh(&self) -> Mesh {
-        Sphere::new(lattice::NODE_RADIUS).mesh().uv(32, 18)
+        Sphere::new(lattice_config::NODE_RADIUS).mesh().uv(32, 18)
     }
 }
 
@@ -35,7 +34,7 @@ impl Node {
 #[derive(Component)]
 pub struct Link {
     spring_const: f32,
-    orig_length: f32,
+    orig_length: f32, //TODO: maybe change to int so that all the scaling math is easier? 
     pub to: Entity,
     pub from: Entity,
 }
@@ -58,8 +57,8 @@ impl Link {
     /// Create the mesh for the link
     fn create_mesh(&self) -> Mesh {
         Cuboid::new(
-            lattice::LINK_RADIUS,
-            lattice::LINK_RADIUS,
+            lattice_config::LINK_RADIUS,
+            lattice_config::LINK_RADIUS,
             -self.orig_length,
         )
         .mesh()
@@ -142,23 +141,23 @@ fn calc_num_lattice_links(dim: u32) -> u32 {
 // TODO: maybe this function could just be absorbed into lattice nodes and
 // then it just returns an object to generate_lattice.
 /// Spawn all of the nodes into the environment and store them
-/// in the latticenodes struct
+/// in the lattice nodes struct
 fn create_all_nodes(
     lattice_nodes: &mut LatticeNodes,
     commands: &mut Commands,
     meshes: &mut ResMut<Assets<Mesh>>,
     materials: &mut ResMut<Assets<StandardMaterial>>,
 ) {
-    let nodes_dim = lattice::DIM + 1;
+    const NODES_DIM :u32 = lattice_config::DIM + 1;
 
-    for z in 0..nodes_dim {
-        for y in 0..nodes_dim {
-            for x in 0..nodes_dim {
+    for z in 0..NODES_DIM {
+        for y in 0..NODES_DIM {
+            for x in 0..NODES_DIM {
                 // TODO: provide randomized vel.
                 let starting_pos = Vec3::new(
-                    x as f32 * lattice::STARTING_LINK_LEN,
-                    y as f32 * lattice::STARTING_LINK_LEN,
-                    z as f32 * lattice::STARTING_LINK_LEN,
+                    x as f32 * lattice_config::STARTING_LINK_LEN,
+                    y as f32 * lattice_config::STARTING_LINK_LEN,
+                    z as f32 * lattice_config::STARTING_LINK_LEN,
                 );
                 let node1 = Node::new(starting_pos, Vec3::ZERO);
                 lattice_nodes.add(
@@ -166,7 +165,7 @@ fn create_all_nodes(
                         .spawn((
                             PbrBundle {
                                 mesh: meshes.add(node1.create_mesh()), // not ideal
-                                material: materials.add(Color::WHITE),
+                                material: materials.add(colors_config::NODE_COLOR),
                                 transform: Transform::from_translation(node1.pos.clone()),
                                 ..default()
                             },
@@ -179,7 +178,7 @@ fn create_all_nodes(
     }
 
     debug_assert_eq!(
-        (calc_num_lattice_nodes(lattice::DIM)) as usize,
+        (calc_num_lattice_nodes(lattice_config::DIM)) as usize,
         lattice_nodes.data.len()
     );
 }
@@ -195,7 +194,7 @@ pub fn generate_lattice(
 ) {
     // Turns out, you don't need all the directions cause you
     // are only constructing the cube in one direction.
-    // This gets rid of duplicates.
+    // This gets rid of of the duplication problem.
     let dir_arr = [
         IVec3::new(1, 0, 0),
         IVec3::new(0, 1, 0),
@@ -209,16 +208,17 @@ pub fn generate_lattice(
     ];
 
     // Generate all of the nodes first
-    let mut node_data = LatticeNodes::new(lattice::DIM);
+    let mut node_data = LatticeNodes::new(lattice_config::DIM);
     create_all_nodes(&mut node_data, &mut commands, &mut meshes, &mut materials);
 
     // fill out and spawn all links
-    let nodes_dim = lattice::DIM + 1;
+    let nodes_dim = lattice_config::DIM + 1;
     let mut counter: u32 = 0;
     for z in 0..nodes_dim {
         for y in 0..nodes_dim {
             for x in 0..nodes_dim {
-                // need to check 18 directions
+                // need to check 18 directions, jk 9 directions
+                // (because duplicates while building lattice)
                 for dir in dir_arr {
                     // TODO: this u32 and i32 conversions are messy
                     let lattice_node_pos = UVec3 { x, y, z };
@@ -238,13 +238,13 @@ pub fn generate_lattice(
                     let to_node = node_data.get(to_node_pos.as_uvec3());
                     let from_node = node_data.get(lattice_node_pos);
 
-                    let link = Link::new(2., lattice::STARTING_LINK_LEN, to_node, from_node);
+                    let link = Link::new(2., lattice_config::STARTING_LINK_LEN, to_node, from_node);
                     commands.spawn((
                         PbrBundle {
                             mesh: meshes.add(link.create_mesh()),
-                            material: materials.add(colors::BLUE),
+                            material: materials.add(colors_config::SPRING_COLOR),
                             transform: Transform::from_translation(
-                                lattice_node_pos.as_vec3() * lattice::STARTING_LINK_LEN,
+                                lattice_node_pos.as_vec3() * lattice_config::STARTING_LINK_LEN,
                             ),
                             ..default()
                         },
@@ -257,7 +257,7 @@ pub fn generate_lattice(
         }
     }
 
-    let num_links = calc_num_lattice_links(lattice::DIM);
+    let num_links = calc_num_lattice_links(lattice_config::DIM);
     println!("number of springs generated is {counter} and expected was {num_links}",);
     debug_assert_eq!(counter, num_links);
 }
@@ -278,9 +278,14 @@ pub fn update_spring(
         let length = dir.length();
         let res = dir.normalize() * (length / 2.) + node2.translation;
 
-        // this applies to link
+        // apply transform to the link
         transform.translation = res;
         let fwd = transform.forward().xyz().normalize();
+        //TODO: replace with the other function now that you upgraded engine version
         transform.rotate(Quat::from_rotation_arc(fwd, dir.normalize()));
+        // scale the link so that it connects the nodes
+        transform.scale.z = length / link.orig_length;
+
+
     }
 }
