@@ -1,5 +1,7 @@
 use bevy::prelude::*;
 
+use crate::colors;
+
 //////////////////////////////////////////////////
 /// CONSTS
 //////////////////////////////////////////////////
@@ -64,7 +66,9 @@ impl Link {
 
     /// Create the mesh for the link
     fn create_mesh(&self) -> Mesh {
-        Cuboid::new(LATTICE_LINK_RADIUS, LATTICE_LINK_RADIUS, -self.orig_length).mesh()
+        Cuboid::new(LATTICE_LINK_RADIUS, LATTICE_LINK_RADIUS, -self.orig_length)
+            .mesh()
+            .into()
     }
 }
 
@@ -243,7 +247,7 @@ pub fn generate_lattice(
                     commands.spawn((
                         PbrBundle {
                             mesh: meshes.add(link.create_mesh()),
-                            material: materials.add(Color::BLUE),
+                            material: materials.add(colors::BLUE),
                             transform: Transform::from_translation(
                                 lattice_node_pos.as_vec3() * LATTICE_STARTING_LINK_LEN,
                             ),
