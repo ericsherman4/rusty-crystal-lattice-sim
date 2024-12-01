@@ -1,11 +1,15 @@
-use crate::config::{colors_config,lattice_config};
+use crate::config::{colors_config, lattice_config};
+use crate::resources::RandomSource;
 use bevy::prelude::*;
+use rand::distributions::Uniform;
+use rand::Rng;
 
 //////////////////////////////////////////////////
 /// NODE
 //////////////////////////////////////////////////
 
 #[derive(Component)]
+#[allow(dead_code)] //TODO: remove
 pub struct Node {
     pos: Vec3,
     vel: Vec3,
@@ -32,9 +36,10 @@ impl Node {
 //////////////////////////////////////////////////
 
 #[derive(Component)]
+#[allow(dead_code)] //TODO: remove
 pub struct Link {
     spring_const: f32,
-    orig_length: f32, //TODO: maybe change to int so that all the scaling math is easier? 
+    orig_length: f32, //TODO: maybe change to int so that all the scaling math is easier?
     pub to: Entity,
     pub from: Entity,
 }
@@ -147,29 +152,40 @@ fn create_all_nodes(
     commands: &mut Commands,
     meshes: &mut ResMut<Assets<Mesh>>,
     materials: &mut ResMut<Assets<StandardMaterial>>,
+    random_source: &mut ResMut<RandomSource>,
 ) {
-    const NODES_DIM :u32 = lattice_config::DIM + 1;
+    const NODES_DIM: u32 = lattice_config::DIM + 1;
 
+    // think you can only do this because there is one resource inserted?
+    // A: There can only be one type of a resource inserted. Otherwise, need to use ECS
+    let rng = &mut random_source.0;
+    let dist: Uniform<f32> = Uniform::new_inclusive(0.0, 1.0);
+
+    println!("Entering for loop");
     for z in 0..NODES_DIM {
         for y in 0..NODES_DIM {
             for x in 0..NODES_DIM {
-                // TODO: provide randomized vel.
                 let starting_pos = Vec3::new(
                     x as f32 * lattice_config::STARTING_LINK_LEN,
                     y as f32 * lattice_config::STARTING_LINK_LEN,
                     z as f32 * lattice_config::STARTING_LINK_LEN,
                 );
-                let node1 = Node::new(starting_pos, Vec3::ZERO);
+
+                let starting_vel = Vec3::new(rng.sample(dist), rng.sample(dist), rng.sample(dist));
+
+                println!("Staring vel {}", starting_vel);
+
+                let node = Node::new(starting_pos, starting_vel);
                 lattice_nodes.add(
                     commands
                         .spawn((
                             PbrBundle {
-                                mesh: meshes.add(node1.create_mesh()), // not ideal
+                                mesh: meshes.add(node.create_mesh()), // not ideal
                                 material: materials.add(colors_config::NODE_COLOR),
-                                transform: Transform::from_translation(node1.pos.clone()),
+                                transform: Transform::from_translation(node.pos.clone()),
                                 ..default()
                             },
-                            node1,
+                            node,
                         ))
                         .id(),
                 );
@@ -191,7 +207,9 @@ pub fn generate_lattice(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
+    mut random_source: ResMut<RandomSource>,
 ) {
+    println!("Generating lattice");
     // Turns out, you don't need all the directions cause you
     // are only constructing the cube in one direction.
     // This gets rid of of the duplication problem.
@@ -209,7 +227,13 @@ pub fn generate_lattice(
 
     // Generate all of the nodes first
     let mut node_data = LatticeNodes::new(lattice_config::DIM);
-    create_all_nodes(&mut node_data, &mut commands, &mut meshes, &mut materials);
+    create_all_nodes(
+        &mut node_data,
+        &mut commands,
+        &mut meshes,
+        &mut materials,
+        &mut random_source,
+    );
 
     // fill out and spawn all links
     let nodes_dim = lattice_config::DIM + 1;
@@ -285,7 +309,5 @@ pub fn update_spring(
         transform.rotate(Quat::from_rotation_arc(fwd, dir.normalize()));
         // scale the link so that it connects the nodes
         transform.scale.z = length / link.orig_length;
-
-
     }
 }

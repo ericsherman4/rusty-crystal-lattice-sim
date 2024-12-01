@@ -9,6 +9,7 @@ edition = "2021"
 # If you remove the "dynamic" feature, your game executable can run standalone.
 bevy = {version = "0.14.2", features =["dynamic_linking"]}
 rand = "0.8.5"
+rand_chacha = "0.3.1"
 smooth-bevy-cameras = "0.12.0"
 strum = { version = "0.26.2", features = ["derive"] }
 strum_macros = "0.26"

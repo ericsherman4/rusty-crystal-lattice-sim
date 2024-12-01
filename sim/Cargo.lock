@@ -3278,6 +3278,7 @@ version = "0.1.0"
 dependencies = [
  "bevy",
  "rand",
+ "rand_chacha",
  "smooth-bevy-cameras",
  "strum",
  "strum_macros",

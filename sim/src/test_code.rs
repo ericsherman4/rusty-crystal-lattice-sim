@@ -118,3 +118,19 @@ fn get_links(time: Res<Time>, linkq: Query<(Entity, &Link)>,mut nodes: Query<(En
 //     }
 
 // }
+
+
+pub fn camera_reset_control(
+    keys: Res<ButtonInput<KeyCode>>,
+    mut query: Query<&mut Transform, With<MyCamera>>,
+) {
+    // this doesnt work idk lol
+    // not sure if the library gives us the ability to do this
+    // probably write own in the future and get rid of the unreal camera controls you dont want
+    if keys.just_pressed(KeyCode::Space) {
+        for mut trans in &mut query {
+            println!("reseting camera!");
+            *trans = Transform::from_xyz(-2.5, 4.5, 9.0);
+        }
+    }
+}

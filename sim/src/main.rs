@@ -1,10 +1,11 @@
 use bevy::prelude::*;
+use resources::add_rng;
 use std::time::Duration;
 
 mod config; // this allows me to do use create::config::colors in other files in this folder
+mod resources;
 mod scene;
-mod spring; 
-
+mod spring;
 
 // https://docs.rs/smooth-bevy-cameras/0.11.0/smooth_bevy_cameras/
 // https://github.com/bonsairobo/smooth-bevy-cameras/blob/main/examples/simple_unreal.rs
@@ -33,7 +34,10 @@ fn main() {
         .add_systems(Startup, scene::draw_xyz)
         // ----------------------------------------------------------------------------
         // Generate a lattice structure
-        .add_systems(Startup, spring::generate_lattice)
+        .add_systems(
+            Startup,
+            (resources::add_rng, spring::generate_lattice.after(add_rng)),
+        )
         // ----------------------------------------------------------------------------
         // not currently working
         // .add_systems(Update, scene::camera_reset_control)
