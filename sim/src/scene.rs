@@ -122,7 +122,7 @@ fn create_cameras(commands: &mut Commands) {
 
     let unreal_camera = UnrealCameraBundle::new(
         UnrealCameraController::default(),
-        Vec3::from(STARTING_CAM_POS),
+        STARTING_CAM_POS,
         Vec3::new(0., 0., 0.),
         Vec3::Y,
     );

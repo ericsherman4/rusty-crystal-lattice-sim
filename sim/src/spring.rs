@@ -110,7 +110,7 @@ impl LatticeNodes {
         debug_assert!(z <= (self.dim + 1));
         // println!("accessing {} {} {}", x,y,z);
         let idx = self.get_data_idx(x, y, z);
-        return self.data[idx];
+        self.data[idx]
     }
 
     /// Add a node to the lattice.
@@ -182,7 +182,7 @@ fn create_all_nodes(
                             PbrBundle {
                                 mesh: meshes.add(node.create_mesh()), // not ideal
                                 material: materials.add(colors_config::NODE_COLOR),
-                                transform: Transform::from_translation(node.pos.clone()),
+                                transform: Transform::from_translation(node.pos),
                                 ..default()
                             },
                             node,
