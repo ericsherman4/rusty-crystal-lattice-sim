@@ -9,7 +9,7 @@ pub mod colors_config {
 }
 
 pub mod lattice_config {
-    pub const DIM: u32 = 1;
+    pub const DIM: u32 = 8;
     pub const STARTING_LINK_LEN: f32 = 3.; // z component of cuboid gets this
     pub const NODE_RADIUS: f32 = 0.1 / 2.;
     pub const LINK_RADIUS: f32 = 0.1; //x and y component of cuboid get this
