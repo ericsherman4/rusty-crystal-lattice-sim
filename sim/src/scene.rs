@@ -34,7 +34,7 @@ pub fn draw_xyz(
 ) {
     // Origin
     commands.spawn(PbrBundle {
-        mesh: meshes.add(Sphere::default().mesh().uv(32, 18)),
+        mesh: meshes.add(Sphere{radius: axis_config::ORIGIN_SPHERE_RADIUS}.mesh().uv(32, 18)),
         material: materials.add(Color::WHITE),
         transform: Transform::from_translation(Vec3::ZERO),
         ..default()
@@ -147,7 +147,7 @@ fn create_light(commands: &mut Commands, gizmo_store: &mut ResMut<GizmoConfigSto
             // shadows_enabled: true,
             // shadow_depth_bias: 0.2,
             intensity: 10_000_000.,
-            range: 50.,
+            range: 300.,
             ..default()
         },
         transform: Transform::from_translation(lights_config::POS),
@@ -159,7 +159,7 @@ fn create_light(commands: &mut Commands, gizmo_store: &mut ResMut<GizmoConfigSto
         point_light: PointLight {
             // shadows_enabled: true,
             intensity: 10_000_000.,
-            range: 50.,
+            range: 300.,
             ..default()
         },
         transform: Transform::from_translation(lights_config::POS_2),

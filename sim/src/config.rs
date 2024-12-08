@@ -9,10 +9,18 @@ pub mod colors_config {
 }
 
 pub mod lattice_config {
-    pub const DIM: u32 = 8;
-    pub const STARTING_LINK_LEN: f32 = 3.; // z component of cuboid gets this
-    pub const NODE_RADIUS: f32 = 0.1 / 2.;
+    pub const DIM: u32 = 7;
     pub const LINK_RADIUS: f32 = 0.1; //x and y component of cuboid get this
+    pub const STARTING_LINK_LEN: f32 = 2.; // z component of cuboid gets this
+    
+    pub const NODE_RADIUS: f32 = 0.1 / 2.;
+    pub const NODE_MASS: f32 = 10.0;
+    
+    pub const SPRING_CONST: f32 = 2.0;
+
+    const START_VEL_ABS: f32 = 0.1;
+    pub const START_VEL_MIN: f32 = -START_VEL_ABS;
+    pub const START_VEL_MAX: f32 = START_VEL_ABS;
 }
 
 pub mod lights_config {
@@ -29,7 +37,8 @@ pub mod cam_config {
 }
 
 pub mod axis_config {
-    pub const GIRTH: f32 = 0.2;
-    pub const LENGTH: f32 = 5.;
+    pub const GIRTH: f32 = 0.05;
+    pub const LENGTH: f32 = 2.;
     pub const HALF_LENGTH: f32 = LENGTH / 2.;
+    pub const ORIGIN_SPHERE_RADIUS: f32 = GIRTH;
 }
