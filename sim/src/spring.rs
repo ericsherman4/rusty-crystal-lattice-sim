@@ -271,11 +271,11 @@ pub fn generate_lattice(
                     let to_node = node_data.get(to_node_pos.as_uvec3());
                     let from_node = node_data.get(curr_node_pos);
 
-                    // Determine the length of the spring
+                    // Determine the length of the spring, diagonal springs will not be the same starting length
+                    // as horizontal and vertical ones
                     let length = (to_node_pos.as_vec3() * lattice_config::STARTING_LINK_LEN
                         - curr_node_pos.as_vec3() * lattice_config::STARTING_LINK_LEN)
                         .length();
-                    println!("{length}");
 
                     // Create a new Link / Spring
                     let link = Link::new(lattice_config::SPRING_CONST, length, to_node, from_node);
@@ -289,7 +289,7 @@ pub fn generate_lattice(
                                 // to access the node data.
                                 curr_node_pos.as_vec3() * lattice_config::STARTING_LINK_LEN,
                             ),
-                            visibility: Visibility::Visible,
+                            visibility: lattice_config::LINK_VISIBILITY,
                             ..default()
                         },
                         link,
@@ -334,10 +334,6 @@ pub fn update_nodes_state(time: Res<Time>, mut query: Query<(&mut Node, &mut Tra
 /// Update spring phyiscs
 pub fn update_link_physics(links: Query<&Link>, mut nodes: Query<(&mut Node, &mut Transform)>) {
     for link in &links {
-        // let (mut node_from,mut node_to) = match (nodes.get_mut(link.from), nodes.get_mut(link.to)) {
-        //     (Ok(n1), Ok(n2)) => (n1, n2),
-        //     _ => panic!("Unable to get one of the nodes")
-        // };
 
         //TODO: clean up where internal position vs transform is used.
 
@@ -383,24 +379,30 @@ pub fn update_spring(
     for (link, mut transform) in &mut links {
         // expect and unwrap not encouraged to use, see
         // https://doc.rust-lang.org/book/ch09-02-recoverable-errors-with-result.html
-        let node1 = nodes
+        let node_to = nodes
             .get(link.to)
             .expect("The node should exist as no nodes are ever despawned.");
-        let node2 = nodes
+        let node_from = nodes
             .get(link.from)
             .expect("The node should exist as no nodes are ever despawned.");
 
-        // TODO: separate function?
         // all of this is updating the position and angle of the spring
-        let dir = node1.translation - node2.translation;
-        let length = dir.length();
-        let res = dir.normalize() * (length / 2.) + node2.translation;
+        // let dir = node_to.translation - node_from.translation;
+        // let length = dir.length();
+        // let res = dir.normalize() * (length / 2.) + node_from.translation;
         // apply transform to the link
-        transform.translation = res;
-        let fwd = transform.forward().xyz().normalize();
+        // transform.translation = res;
+        // let fwd = transform.forward().xyz().normalize();
         //TODO: replace with the other function now that you upgraded engine version
-        transform.rotate(Quat::from_rotation_arc(fwd, dir.normalize()));
+        // transform.rotate(Quat::from_rotation_arc(fwd, dir.normalize()));
         // scale the link so that it connects the nodes
-        transform.scale.z = length / link.orig_length;
+        // transform.scale.z = length / link.orig_length;
+
+        let dir = node_to.translation - node_from.translation;
+        transform.translation = dir;
+
+        *transform = transform.aligned_by(Vec3::Z, dir, Vec3::Y, dir.cross(node_from.translation))
+
+
     }
 }
