@@ -49,10 +49,7 @@ fn main() {
         // Generate a lattice structure
         .add_systems(
             Startup,
-            (
-                resources::add_rng,
-                spring::generate_lattice.after(resources::add_rng),
-            ),
+            (resources::add_rng, spring::generate_lattice).chain(),
         )
         // ----------------------------------------------------------------------------
         // not currently working
@@ -67,11 +64,7 @@ fn main() {
         // Update the spring's loc via transforms.
         .add_systems(
             FixedUpdate,
-            (
-                spring::update_nodes_state.before(spring::update_link_physics),
-                spring::update_link_physics.before(spring::update_spring),
-                spring::update_spring,
-            ),
+            (spring::update_nodes_state, spring::update_link_physics,spring::update_spring).chain(),
         )
         // ----------------------------------------------------------------------------
         // Run it
