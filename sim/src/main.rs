@@ -1,7 +1,10 @@
 use bevy::{
-    diagnostic::{DiagnosticsStore, FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin, EntityCountDiagnosticsPlugin},
-    time::common_conditions::on_timer,
+    diagnostic::{
+        DiagnosticsStore, EntityCountDiagnosticsPlugin, FrameTimeDiagnosticsPlugin,
+        LogDiagnosticsPlugin,
+    },
     prelude::*,
+    time::common_conditions::on_timer,
 };
 use std::time::Duration;
 
@@ -14,7 +17,6 @@ mod spring;
 // https://github.com/bonsairobo/smooth-bevy-cameras/blob/main/examples/simple_unreal.rs
 use smooth_bevy_cameras::controllers::unreal::UnrealCameraPlugin;
 use smooth_bevy_cameras::LookTransformPlugin;
-
 
 //TODO: ADD THIS FPS OVERLAY https://bevyengine.org/examples/ui-user-interface/text/
 
@@ -30,7 +32,7 @@ fn main() {
             UnrealCameraPlugin::default(),
         ))
         // ----------------------------------------------------------------------------
-        // System enables diagnositcs for 10 seconds, then disables for 10 seconds. 
+        // System enables diagnositcs for 10 seconds, then disables for 10 seconds.
         // taken from example. https://bevyengine.org/examples/diagnostics/enabling-disabling-diagnostic/
         // .add_systems(
         //     Update,
@@ -47,11 +49,14 @@ fn main() {
         // Generate a lattice structure
         .add_systems(
             Startup,
-            (resources::add_rng, spring::generate_lattice.after(resources::add_rng)),
+            (
+                resources::add_rng,
+                spring::generate_lattice.after(resources::add_rng),
+            ),
         )
         // ----------------------------------------------------------------------------
         // not currently working
-        // .add_systems(Update, scene::camera_reset_control)        
+        // .add_systems(Update, scene::camera_reset_control)
         // ----------------------------------------------------------------------------
         // This lets you run an update at some interval. Not sure how to make multiple of them
         // I think these just apply to FixedUpdate schedule.
@@ -61,12 +66,12 @@ fn main() {
         // ----------------------------------------------------------------------------
         // Update the spring's loc via transforms.
         .add_systems(
-            FixedUpdate, 
+            FixedUpdate,
             (
                 spring::update_nodes_state.before(spring::update_link_physics),
                 spring::update_link_physics.before(spring::update_spring),
-                spring::update_spring
-            )
+                spring::update_spring,
+            ),
         )
         // ----------------------------------------------------------------------------
         // Run it

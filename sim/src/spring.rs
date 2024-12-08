@@ -10,10 +10,10 @@ use rand::Rng;
 
 #[derive(Component)]
 pub struct Node {
-    pos: Vec3, // meters
-    vel: Vec3, // meters/sec
+    pos: Vec3,        // meters
+    vel: Vec3,        // meters/sec
     sum_forces: Vec3, //newtons
-    mass: f32, // kg
+    mass: f32,        // kg
 }
 
 impl Node {
@@ -49,7 +49,7 @@ pub struct Link {
 }
 
 impl Link {
-    /// Create a new link. 
+    /// Create a new link.
     /// From denotes from which node the link is connected and
     /// to denotes to which node the link is connected
     fn new(spring_const: f32, orig_length: f32, to: Entity, from: Entity) -> Self {
@@ -163,7 +163,8 @@ fn create_all_nodes(
     // think you can only do this because there is one resource inserted?
     // A: There can only be one type of a resource inserted. Otherwise, need to use ECS
     let rng = &mut random_source.0;
-    let dist: Uniform<f32> = Uniform::new_inclusive(lattice_config::START_VEL_MIN, lattice_config::START_VEL_MAX);
+    let dist: Uniform<f32> =
+        Uniform::new_inclusive(lattice_config::START_VEL_MIN, lattice_config::START_VEL_MAX);
 
     println!("Entering for loop");
     for z in 0..NODES_DIM {
@@ -271,9 +272,11 @@ pub fn generate_lattice(
                     let from_node = node_data.get(curr_node_pos);
 
                     // Determine the length of the spring
-                    let length = (to_node_pos.as_vec3()*lattice_config::STARTING_LINK_LEN - curr_node_pos.as_vec3()*lattice_config::STARTING_LINK_LEN).length();
+                    let length = (to_node_pos.as_vec3() * lattice_config::STARTING_LINK_LEN
+                        - curr_node_pos.as_vec3() * lattice_config::STARTING_LINK_LEN)
+                        .length();
                     println!("{length}");
-                    
+
                     // Create a new Link / Spring
                     let link = Link::new(lattice_config::SPRING_CONST, length, to_node, from_node);
                     commands.spawn((
@@ -303,13 +306,6 @@ pub fn generate_lattice(
     debug_assert_eq!(counter, num_links);
 }
 
-
-// loop through each link. calculate the force generated from the link and exerted on the nodes (watch out for double counting forces)
-// then add that force to each node.
-// then loop through all nodes and determine the new position and velocity of the node.
-
-
-
 // to start the springs are not compressed at all and should not exert any forces.
 // we initialize the sum forces on Node to zero.
 // the nodes are moving though.
@@ -317,14 +313,8 @@ pub fn generate_lattice(
 // when the springs resize, they are exerting force on the nodes
 // TODO: implement them separetly and then curious the performance boost when you combine them
 
-
-
 /// Update the state of the nodes and their positions
-pub fn update_nodes_state(
-    time: Res<Time>,
-    mut query: Query<(&mut Node, &mut Transform)>,
-)
-{
+pub fn update_nodes_state(time: Res<Time>, mut query: Query<(&mut Node, &mut Transform)>) {
     let delta_t = time.delta_seconds();
     // println!("Elasped time is {}", delta_t);
 
@@ -342,26 +332,22 @@ pub fn update_nodes_state(
 }
 
 /// Update spring phyiscs
-pub fn update_link_physics(
-    links: Query<& Link>,
-    mut nodes: Query<(&mut Node, &mut Transform)>,
-)
-{
+pub fn update_link_physics(links: Query<&Link>, mut nodes: Query<(&mut Node, &mut Transform)>) {
     for link in &links {
         // let (mut node_from,mut node_to) = match (nodes.get_mut(link.from), nodes.get_mut(link.to)) {
         //     (Ok(n1), Ok(n2)) => (n1, n2),
         //     _ => panic!("Unable to get one of the nodes")
         // };
 
-        //TODO: clean up where internal position vs transform is used. 
+        //TODO: clean up where internal position vs transform is used.
 
         let node_from = match nodes.get(link.from) {
             Ok(node) => node,
-            Err(error) => panic!("Unable to get the node {error:?}")
+            Err(error) => panic!("Unable to get the node {error:?}"),
         };
         let node_to = match nodes.get(link.to) {
             Ok(node) => node,
-            Err(error) => panic!("Unable to get the node {error:?}")
+            Err(error) => panic!("Unable to get the node {error:?}"),
         };
 
         let node_to_pos = node_to.0.pos;
@@ -374,22 +360,20 @@ pub fn update_link_physics(
 
         let mut node_from_mut = match nodes.get_mut(link.from) {
             Ok(node) => node,
-            Err(error) => panic!("Unable to get the node {error:?}")
+            Err(error) => panic!("Unable to get the node {error:?}"),
         };
 
         // this force is applied in the axis colinear from node 1 to node 2
         node_from_mut.0.sum_forces += force / 2.0 * (node_from_pos - node_to_pos).normalize();
-        
 
         let mut node_to_mut = match nodes.get_mut(link.to) {
             Ok(node) => node,
-            Err(error) => panic!("Unable to get the node {error:?}")
+            Err(error) => panic!("Unable to get the node {error:?}"),
         };
 
         node_to_mut.0.sum_forces += force / 2.0 * (node_to_pos - node_from_pos).normalize();
     }
 }
-
 
 /// Update the springs
 pub fn update_spring(
@@ -397,7 +381,7 @@ pub fn update_spring(
     nodes: Query<&mut Transform, With<Node>>,
 ) {
     for (link, mut transform) in &mut links {
-        // expect and unwrap not encouraged to use, see 
+        // expect and unwrap not encouraged to use, see
         // https://doc.rust-lang.org/book/ch09-02-recoverable-errors-with-result.html
         let node1 = nodes
             .get(link.to)
@@ -406,7 +390,7 @@ pub fn update_spring(
             .get(link.from)
             .expect("The node should exist as no nodes are ever despawned.");
 
-        // TODO: separate function? 
+        // TODO: separate function?
         // all of this is updating the position and angle of the spring
         let dir = node1.translation - node2.translation;
         let length = dir.length();

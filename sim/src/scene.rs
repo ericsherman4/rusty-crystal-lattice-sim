@@ -34,7 +34,13 @@ pub fn draw_xyz(
 ) {
     // Origin
     commands.spawn(PbrBundle {
-        mesh: meshes.add(Sphere{radius: axis_config::ORIGIN_SPHERE_RADIUS}.mesh().uv(32, 18)),
+        mesh: meshes.add(
+            Sphere {
+                radius: axis_config::ORIGIN_SPHERE_RADIUS,
+            }
+            .mesh()
+            .uv(32, 18),
+        ),
         material: materials.add(Color::WHITE),
         transform: Transform::from_translation(Vec3::ZERO),
         ..default()
