@@ -57,7 +57,7 @@ fn main() {
         // I think these just apply to FixedUpdate schedule.
         // Example: https://github.com/bevyengine/bevy/blob/latest/examples/time/time.rs
         // TODO: change spring module name to lattice
-        .insert_resource(Time::<Fixed>::from_duration(Duration::from_millis(50)))
+        .insert_resource(Time::<Fixed>::from_duration(Duration::from_millis(10)))
         // ----------------------------------------------------------------------------
         // Update the spring's loc via transforms.
         .add_systems(

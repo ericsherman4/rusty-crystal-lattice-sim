@@ -29,7 +29,7 @@ impl Default for Node {
             pos: Vec3::ZERO,
             vel: Vec3::ZERO,
             sum_forces: Vec3::ZERO,
-            mass: 1.0,
+            mass: lattice_config::NODE_MASS,
         }
     }
 }
@@ -163,7 +163,7 @@ fn create_all_nodes(
     // think you can only do this because there is one resource inserted?
     // A: There can only be one type of a resource inserted. Otherwise, need to use ECS
     let rng = &mut random_source.0;
-    let dist: Uniform<f32> = Uniform::new_inclusive(0.0, 1.0);
+    let dist: Uniform<f32> = Uniform::new_inclusive(lattice_config::START_VEL_MIN, lattice_config::START_VEL_MAX);
 
     println!("Entering for loop");
     for z in 0..NODES_DIM {
@@ -253,8 +253,8 @@ pub fn generate_lattice(
                 // (because duplicates while building lattice)
                 for dir in dir_arr {
                     // TODO: this u32 and i32 conversions are messy
-                    let lattice_node_pos = UVec3 { x, y, z };
-                    let to_node_pos = lattice_node_pos.as_ivec3() + dir;
+                    let curr_node_pos = UVec3 { x, y, z };
+                    let to_node_pos = curr_node_pos.as_ivec3() + dir;
 
                     if to_node_pos.x < 0
                         || to_node_pos.x >= nodes_dim as i32
@@ -266,18 +266,27 @@ pub fn generate_lattice(
                         continue;
                     }
 
-                    // println!("getting node {:?}. input dir is {:?}. current pos is {:?}", to_node_pos, dir, lattice_node_pos);
+                    // Get the entities for both nodes
                     let to_node = node_data.get(to_node_pos.as_uvec3());
-                    let from_node = node_data.get(lattice_node_pos);
+                    let from_node = node_data.get(curr_node_pos);
 
-                    let link = Link::new(2., lattice_config::STARTING_LINK_LEN, to_node, from_node);
+                    // Determine the length of the spring
+                    let length = (to_node_pos.as_vec3()*lattice_config::STARTING_LINK_LEN - curr_node_pos.as_vec3()*lattice_config::STARTING_LINK_LEN).length();
+                    println!("{length}");
+                    
+                    // Create a new Link / Spring
+                    let link = Link::new(lattice_config::SPRING_CONST, length, to_node, from_node);
                     commands.spawn((
                         PbrBundle {
                             mesh: meshes.add(link.create_mesh()),
                             material: materials.add(colors_config::SPRING_COLOR),
                             transform: Transform::from_translation(
-                                lattice_node_pos.as_vec3() * lattice_config::STARTING_LINK_LEN,
+                                // This is left as is instead of feeding length because
+                                // node_data stores it is a 1x1x1 cube internally so it can use indexes directly
+                                // to access the node data.
+                                curr_node_pos.as_vec3() * lattice_config::STARTING_LINK_LEN,
                             ),
+                            visibility: Visibility::Visible,
                             ..default()
                         },
                         link,
@@ -310,7 +319,7 @@ pub fn generate_lattice(
 
 
 
-/// Update the state of the nodes
+/// Update the state of the nodes and their positions
 pub fn update_nodes_state(
     time: Res<Time>,
     mut query: Query<(&mut Node, &mut Transform)>,
@@ -332,7 +341,7 @@ pub fn update_nodes_state(
     }
 }
 
-// Update spring phyiscs
+/// Update spring phyiscs
 pub fn update_link_physics(
     links: Query<& Link>,
     mut nodes: Query<(&mut Node, &mut Transform)>,
@@ -369,7 +378,7 @@ pub fn update_link_physics(
         };
 
         // this force is applied in the axis colinear from node 1 to node 2
-        node_from_mut.0.sum_forces = force / 2.0 * (node_from_pos - node_to_pos).normalize();
+        node_from_mut.0.sum_forces += force / 2.0 * (node_from_pos - node_to_pos).normalize();
         
 
         let mut node_to_mut = match nodes.get_mut(link.to) {
@@ -377,12 +386,12 @@ pub fn update_link_physics(
             Err(error) => panic!("Unable to get the node {error:?}")
         };
 
-        node_to_mut.0.sum_forces = force / 2.0 * (node_to_pos - node_from_pos).normalize();
+        node_to_mut.0.sum_forces += force / 2.0 * (node_to_pos - node_from_pos).normalize();
     }
 }
 
 
-/// Update the springs and nodes position
+/// Update the springs
 pub fn update_spring(
     mut links: Query<(&Link, &mut Transform), Without<Node>>,
     nodes: Query<&mut Transform, With<Node>>,
