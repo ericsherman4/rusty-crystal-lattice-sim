@@ -142,33 +142,45 @@ fn create_cameras(commands: &mut Commands) {
 /// LIGHTING
 //////////////////////////////////////////////////
 
+// #[derive(Component)]
+// struct MyLight;
+
 /// Create a light in the scene
 fn create_light(commands: &mut Commands, gizmo_store: &mut ResMut<GizmoConfigStore>) {
     // Light
     //TODO: lights are confusing me, they are working backwards as i would expect them to.
     // like placing the light at all postivies values and spawning the camera there, looking at the cube
     // everything is in a shadow.
-    let point_light_bundle_1 = PointLightBundle {
-        point_light: PointLight {
-            // shadows_enabled: true,
-            // shadow_depth_bias: 0.2,
-            intensity: 10_000_000.,
-            range: 300.,
+    let point_light_bundle_1 = SpotLightBundle {
+        spot_light: SpotLight {
+            shadows_enabled: true,
+            shadow_depth_bias: 0.3,
+            intensity: 20_000_000.,
+            range: 50.,
+            color: Color::Srgba(Srgba::WHITE),
             ..default()
         },
-        transform: Transform::from_translation(lights_config::POS),
+        // transform: Transform::from_translation(lights_config::POS),
+        transform: Transform::from_translation(
+            Vec3::splat(lattice_config::DIM as f32 * lattice_config::STARTING_LINK_LEN + lattice_config::STARTING_LINK_LEN*2.)
+        ).looking_at(Vec3::ZERO, Vec3::Y),
         ..default()
     };
 
     // Second light
-    let point_light_bundle_2 = PointLightBundle {
-        point_light: PointLight {
-            // shadows_enabled: true,
-            intensity: 10_000_000.,
-            range: 300.,
+    let point_light_bundle_2 = SpotLightBundle {
+        spot_light: SpotLight {
+            shadows_enabled: true,
+            shadow_depth_bias: 0.3,
+            intensity: 20_000_000.,
+            range: 50.,
+            color: Color::Srgba(Srgba::WHITE),
             ..default()
         },
-        transform: Transform::from_translation(lights_config::POS_2),
+        // transform: Transform::from_translation(lights_config::POS_2),
+        transform: Transform::from_translation(
+            Vec3::splat(-1. * lattice_config::DIM as f32 * lattice_config::STARTING_LINK_LEN + lattice_config::STARTING_LINK_LEN*2.)
+        ).looking_at(Vec3::ZERO, Vec3::Y),
         ..default()
     };
 
