@@ -2,9 +2,7 @@ use bevy::{
     diagnostic::{
         DiagnosticsStore, EntityCountDiagnosticsPlugin, FrameTimeDiagnosticsPlugin,
         LogDiagnosticsPlugin,
-    },
-    prelude::*,
-    time::common_conditions::on_timer,
+    }, prelude::*, time::common_conditions::{once_after_delay, repeating_after_delay}
 };
 use std::time::Duration;
 
@@ -39,7 +37,8 @@ fn main() {
         //     toggle.run_if(on_timer(Duration::from_secs_f32(10.0))), //interesting
         // )
         // ----------------------------------------------------------------------------
-        // Draw the initial scene
+        // Draw the initial scene and set background color
+        .insert_resource(ClearColor(Color::Srgba(Srgba::WHITE)))
         .add_systems(Startup, scene::setup)
         // ----------------------------------------------------------------------------
         // Draw the coordinate grid
@@ -48,23 +47,22 @@ fn main() {
         // ----------------------------------------------------------------------------
         // Generate a lattice structure
         .add_systems(
-            Startup,
-            (resources::add_rng, spring::generate_lattice).chain(),
+            Update,
+            (resources::add_rng, spring::generate_lattice)
+            .chain().run_if(once_after_delay(Duration::from_secs(7)))
         )
-        // ----------------------------------------------------------------------------
-        // not currently working
-        // .add_systems(Update, scene::camera_reset_control)
         // ----------------------------------------------------------------------------
         // This lets you run an update at some interval. Not sure how to make multiple of them
         // I think these just apply to FixedUpdate schedule.
         // Example: https://github.com/bevyengine/bevy/blob/latest/examples/time/time.rs
         // TODO: change spring module name to lattice
-        .insert_resource(Time::<Fixed>::from_duration(Duration::from_millis(10)))
+        .insert_resource(Time::<Fixed>::from_duration(Duration::from_millis(15)))
         // ----------------------------------------------------------------------------
         // Update the spring's loc via transforms.
+        // https://docs.rs/bevy/0.13.2/bevy/time/common_conditions/index.html
         .add_systems(
             FixedUpdate,
-            (spring::update_nodes_state, spring::update_link_physics,spring::update_spring).chain(),
+            (spring::update_nodes_state, spring::update_link_physics,spring::update_spring).chain().run_if(repeating_after_delay(Duration::from_secs(7))),
         )
         // ----------------------------------------------------------------------------
         // Run it

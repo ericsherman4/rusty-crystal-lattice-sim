@@ -386,23 +386,26 @@ pub fn update_spring(
             .get(link.from)
             .expect("The node should exist as no nodes are ever despawned.");
 
-        // all of this is updating the position and angle of the spring
-        // let dir = node_to.translation - node_from.translation;
-        // let length = dir.length();
-        // let res = dir.normalize() * (length / 2.) + node_from.translation;
-        // apply transform to the link
-        // transform.translation = res;
-        // let fwd = transform.forward().xyz().normalize();
-        //TODO: replace with the other function now that you upgraded engine version
-        // transform.rotate(Quat::from_rotation_arc(fwd, dir.normalize()));
-        // scale the link so that it connects the nodes
-        // transform.scale.z = length / link.orig_length;
-
+        // update position and length of the spring
         let dir = node_to.translation - node_from.translation;
-        transform.translation = dir;
+        transform.translation = dir / 2.  + node_from.translation;
+        transform.scale.z = dir.length() / link.orig_length;
+        
+        // rotate the spring so it aligns with the direction vector between the two nodes (node_to - node_from)
+        // best attempt at explaining
+        // This fixes my dir3::new_unchecked is not normalized error
+        // it tries to get the main axis to look at main direction and secondary axis to look secondary direction.
+        // in my case, I only care about main axis looking at main direction but this means there's infinite solutions
+        // so main axis is Z. Z is the one I am scaling as well to get it to stretch between the two nodes.
+        // I want Z to point to the vector from node_from to node_to or the dir vector
+        // The secondary axis - just using Y, I assume X would work, I want to point to a vector orthogonal to the dir vector.
+        // I get this vector by crossing the direction vector node_from vector.
+        // *transform = transform.aligned_by(Vec3::Z, dir, Vec3::Y, dir.cross(node_from.translation))
+        // Update, because i dont care about secondary axis, applied what I learned from above to make looking_at work.
+        // same principals apply, I want to look at the node named node_to and I want a vector orthogonal ot the dir vector.
+        *transform = transform.looking_at(node_to.translation,  dir.cross(node_from.translation))
 
-        *transform = transform.aligned_by(Vec3::Z, dir, Vec3::Y, dir.cross(node_from.translation))
-
-
+        // note that the following doesnt work but produces awesome results
+        // *transform = transform.looking_to(node_to.translation,  dir.cross(node_from.translation))
     }
 }

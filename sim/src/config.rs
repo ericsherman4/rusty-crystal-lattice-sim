@@ -5,23 +5,23 @@ pub mod colors_config {
     pub const GREEN: Color = Color::Srgba(Srgba::GREEN);
     pub const RED: Color = Color::Srgba(Srgba::RED);
     pub const NODE_COLOR: Color = Color::WHITE;
-    pub const SPRING_COLOR: Color = BLUE;
+    pub const SPRING_COLOR: Color = Color::BLACK;
 }
 
 pub mod lattice_config {
     use bevy::prelude::Visibility;
 
-    pub const DIM: u32 = 7;
-    pub const LINK_RADIUS: f32 = 0.1; //x and y component of cuboid get this
-    pub const STARTING_LINK_LEN: f32 = 4.; // z component of cuboid gets this
+    pub const DIM: u32 = 8;
+    pub const LINK_RADIUS: f32 = 0.05; //x and y component of cuboid get this
+    pub const STARTING_LINK_LEN: f32 = 1.; // z component of cuboid gets this
     pub const LINK_VISIBILITY: Visibility = Visibility::Visible;
 
-    pub const NODE_RADIUS: f32 = 0.1 / 2.;
+    pub const NODE_RADIUS: f32 = 0.025;
     pub const NODE_MASS: f32 = 10.0;
 
-    pub const SPRING_CONST: f32 = 2.0;
+    pub const SPRING_CONST: f32 = 5.0;
 
-    const START_VEL_ABS: f32 = 0.5;
+    const START_VEL_ABS: f32 = 0.2;
     pub const START_VEL_MIN: f32 = -START_VEL_ABS;
     pub const START_VEL_MAX: f32 = START_VEL_ABS;
 
