@@ -9,6 +9,11 @@
 run: 
 	cargo run
 
+## run-rel: Run the release executable
+.PHONY: run-rel
+run-rel:
+	cargo run -r
+
 ## check: Check to see code compiles (does not produce executable)
 .PHONY: check
 check: 
