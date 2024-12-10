@@ -336,6 +336,7 @@ pub fn update_link_physics(links: Query<&Link>, mut nodes: Query<(&mut Node, &mu
     for link in &links {
 
         //TODO: clean up where internal position vs transform is used.
+        // TODO: use and_then to return the pos if its okay and then use that for the math below
 
         let node_from = match nodes.get(link.from) {
             Ok(node) => node,
