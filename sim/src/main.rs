@@ -28,6 +28,7 @@ fn main() {
             LogDiagnosticsPlugin::default(),
             LookTransformPlugin,
             UnrealCameraPlugin::default(),
+            //TODO: check out https://docs.rs/bevy/0.14.2/bevy/render/diagnostic/struct.RenderDiagnosticsPlugin.html
         ))
         // ----------------------------------------------------------------------------
         // System enables diagnositcs for 10 seconds, then disables for 10 seconds.
