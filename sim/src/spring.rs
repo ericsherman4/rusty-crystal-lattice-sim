@@ -3,6 +3,8 @@ use crate::resources::RandomSource;
 use bevy::prelude::*;
 use rand::distributions::Uniform;
 use rand::Rng;
+use rand::SeedableRng;
+use rand_chacha::ChaCha8Rng;
 
 //////////////////////////////////////////////////
 /// NODE
@@ -38,11 +40,18 @@ impl Default for Node {
 /// LINK
 //////////////////////////////////////////////////
 
+// i think what you could do is just give it a static component when you are generating the lattice
+// and if its in the right position, give it a static componennt and then in your updates, just make the node impossible to move.
+
+#[derive(Component)]
+pub struct Static;
+
 #[derive(Component)]
 pub struct Link {
     // Links are massless.
     // Using link / spring interchangably throughout the code
     spring_const: f32,
+    delta_spring_length_pre: f32, 
     orig_length: f32, //TODO: maybe change to int so that all the scaling math is easier?
     pub to: Entity,
     pub from: Entity,
@@ -60,6 +69,7 @@ impl Link {
             orig_length,
             to,
             from,
+            delta_spring_length_pre: 0.0,
         }
     }
 
@@ -177,6 +187,7 @@ fn create_all_nodes(
                 );
 
                 let starting_vel = Vec3::new(rng.sample(dist), rng.sample(dist), rng.sample(dist));
+                // let starting_vel = Vec3::new(rng.sample(dist), 0.0,0.0); //this yields cool results
 
                 println!("Staring vel {}", starting_vel);
 
@@ -244,6 +255,11 @@ pub fn generate_lattice(
         &mut random_source,
     );
 
+    let keyboard_mashing: u64 = 459347051375372;
+    let mut rng = ChaCha8Rng::seed_from_u64(keyboard_mashing);
+    let dist: Uniform<f32> = Uniform::new_inclusive(0.0, 1.0);
+   
+
     // fill out and spawn all links
     let nodes_dim = lattice_config::DIM + 1;
     let mut counter: u32 = 0;
@@ -277,12 +293,19 @@ pub fn generate_lattice(
                         - curr_node_pos.as_vec3() * lattice_config::STARTING_LINK_LEN)
                         .length();
 
+                    // Generate a color that creates a gradient across the cube
+                    let position = curr_node_pos.as_vec3() / nodes_dim as f32;
+                    // Generate a random color
+                    // let color: Color = Color::srgb(rng.sample(dist), rng.sample(dist), rng.sample(dist));
+
+                    let color: Color = Color::srgb(position.x, position.y, position.z);
+
                     // Create a new Link / Spring
                     let link = Link::new(lattice_config::SPRING_CONST, length, to_node, from_node);
                     commands.spawn((
                         PbrBundle {
                             mesh: meshes.add(link.create_mesh()),
-                            material: materials.add(colors_config::SPRING_COLOR),
+                            material: materials.add(color),
                             transform: Transform::from_translation(
                                 // This is left as is instead of feeding length because
                                 // node_data stores it is a 1x1x1 cube internally so it can use indexes directly
@@ -322,6 +345,7 @@ pub fn update_nodes_state(time: Res<Time>, mut query: Query<(&mut Node, &mut Tra
         // update vel and pos
         let acc = node.sum_forces / node.mass;
         node.vel = node.vel + acc * delta_t;
+
         node.pos = node.pos + node.vel * delta_t;
 
         transform.translation = node.pos;
@@ -332,8 +356,9 @@ pub fn update_nodes_state(time: Res<Time>, mut query: Query<(&mut Node, &mut Tra
 }
 
 /// Update spring phyiscs
-pub fn update_link_physics(links: Query<&Link>, mut nodes: Query<(&mut Node, &mut Transform)>) {
-    for link in &links {
+pub fn update_link_physics(time: Res<Time>, mut links: Query<& mut Link>, mut nodes: Query<(&mut Node, &mut Transform)>) {
+    let delta_t = time.delta_seconds();
+    for mut link in links.iter_mut() {
 
         //TODO: clean up where internal position vs transform is used.
         // TODO: use and_then to return the pos if its okay and then use that for the math below
@@ -349,11 +374,33 @@ pub fn update_link_physics(links: Query<&Link>, mut nodes: Query<(&mut Node, &mu
 
         let node_to_pos = node_to.0.pos;
         let node_from_pos = node_from.0.pos;
+        let force_dir = (node_to_pos - node_from_pos).normalize();
         let length = (node_to_pos - node_from_pos).length();
         let spring_displacement = length - link.orig_length;
         // positive -> spring is expanded
         // negative -> spring is contracted
-        let force = -1. * link.spring_const * spring_displacement;
+
+        // old code
+        // let force = -1. * link.spring_const * spring_displacement - (0.7 * (spring_displacement - link.delta_spring_length_pre)/delta_t);
+        // link.delta_spring_length_pre = spring_displacement;
+
+        // NEW CODE
+        let from_force: Vec3;
+        let to_force: Vec3;
+        if true {
+            // damping
+            from_force = 0.5 * (link.spring_const * spring_displacement - 0.7* node_from.0.vel) * force_dir;
+            to_force = -0.5 * (link.spring_const * spring_displacement - 0.7* node_to.0.vel) * force_dir;
+
+        }
+        else{
+            // no damping
+            from_force = 0.5* (link.spring_const * spring_displacement) * force_dir;
+            to_force = -from_force;
+        }
+
+
+
 
         let mut node_from_mut = match nodes.get_mut(link.from) {
             Ok(node) => node,
@@ -361,14 +408,14 @@ pub fn update_link_physics(links: Query<&Link>, mut nodes: Query<(&mut Node, &mu
         };
 
         // this force is applied in the axis colinear from node 1 to node 2
-        node_from_mut.0.sum_forces += force / 2.0 * (node_from_pos - node_to_pos).normalize();
+        node_from_mut.0.sum_forces += from_force;
 
         let mut node_to_mut = match nodes.get_mut(link.to) {
             Ok(node) => node,
             Err(error) => panic!("Unable to get the node {error:?}"),
         };
 
-        node_to_mut.0.sum_forces += force / 2.0 * (node_to_pos - node_from_pos).normalize();
+        node_to_mut.0.sum_forces += to_force;
     }
 }
 

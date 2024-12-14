@@ -11,15 +11,15 @@ pub mod colors_config {
 pub mod lattice_config {
     use bevy::prelude::Visibility;
 
-    pub const DIM: u32 = 7;
+    pub const DIM: u32 = 5;
     pub const LINK_RADIUS: f32 = 0.05; //x and y component of cuboid get this
     pub const STARTING_LINK_LEN: f32 = 1.; // z component of cuboid gets this
     pub const LINK_VISIBILITY: Visibility = Visibility::Visible;
 
     pub const NODE_RADIUS: f32 = 0.025;
-    pub const NODE_MASS: f32 = 10.0;
+    pub const NODE_MASS: f32 = 2.0;
 
-    pub const SPRING_CONST: f32 = 5.0;
+    pub const SPRING_CONST: f32 = 8.0;
 
     const START_VEL_ABS: f32 = 0.1;
     pub const START_VEL_MIN: f32 = -START_VEL_ABS;
