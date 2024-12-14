@@ -377,27 +377,30 @@ pub fn update_link_physics(time: Res<Time>, mut links: Query<& mut Link>, mut no
         let force_dir = (node_to_pos - node_from_pos).normalize();
         let length = (node_to_pos - node_from_pos).length();
         let spring_displacement = length - link.orig_length;
+        const DAMPING: f32 = 0.3;
         // positive -> spring is expanded
         // negative -> spring is contracted
 
         // old code
-        // let force = -1. * link.spring_const * spring_displacement - (0.7 * (spring_displacement - link.delta_spring_length_pre)/delta_t);
-        // link.delta_spring_length_pre = spring_displacement;
+        let force = -1. * link.spring_const * spring_displacement - (0.7 * (spring_displacement - link.delta_spring_length_pre)/delta_t);
+        link.delta_spring_length_pre = spring_displacement;
+        let from_force =  -0.5* force;
+        let to_force = -from_force;
 
         // NEW CODE
-        let from_force: Vec3;
-        let to_force: Vec3;
-        if true {
-            // damping
-            from_force = 0.5 * link.spring_const * spring_displacement * force_dir -  0.7* node_from.0.vel;
-            to_force = -0.5 * link.spring_const * spring_displacement * force_dir + 0.7* node_to.0.vel;
+        // let from_force: Vec3;
+        // let to_force: Vec3;
+        // if true {
+        //     // damping
+        //     from_force = 0.5 * link.spring_const * spring_displacement * force_dir -  DAMPING* node_from.0.vel;
+        //     to_force = -0.5 * link.spring_const * spring_displacement * force_dir - DAMPING* node_to.0.vel;
 
-        }
-        else{
-            // no damping
-            from_force = 0.5* (link.spring_const * spring_displacement) * force_dir;
-            to_force = -from_force;
-        }
+        // }
+        // else{
+        //     // no damping
+        //     from_force = 0.5* (link.spring_const * spring_displacement) * force_dir;
+        //     to_force = -from_force;
+        // }
 
 
 
@@ -408,14 +411,14 @@ pub fn update_link_physics(time: Res<Time>, mut links: Query<& mut Link>, mut no
         };
 
         // this force is applied in the axis colinear from node 1 to node 2
-        node_from_mut.0.sum_forces += from_force - to_force;
+        node_from_mut.0.sum_forces += from_force; //- to_force;
 
         let mut node_to_mut = match nodes.get_mut(link.to) {
             Ok(node) => node,
             Err(error) => panic!("Unable to get the node {error:?}"),
         };
 
-        node_to_mut.0.sum_forces += to_force - from_force;
+        node_to_mut.0.sum_forces += to_force; //- from_force;
     }
 }
 

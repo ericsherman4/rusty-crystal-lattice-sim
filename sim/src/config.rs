@@ -21,7 +21,7 @@ pub mod lattice_config {
 
     pub const SPRING_CONST: f32 = 8.0;
 
-    const START_VEL_ABS: f32 = 0.1;
+    const START_VEL_ABS: f32 = 0.4;
     pub const START_VEL_MIN: f32 = -START_VEL_ABS;
     pub const START_VEL_MAX: f32 = START_VEL_ABS;
 
