@@ -389,8 +389,8 @@ pub fn update_link_physics(time: Res<Time>, mut links: Query<& mut Link>, mut no
         let to_force: Vec3;
         if true {
             // damping
-            from_force = 0.5 * (link.spring_const * spring_displacement - 0.7* node_from.0.vel) * force_dir;
-            to_force = -0.5 * (link.spring_const * spring_displacement - 0.7* node_to.0.vel) * force_dir;
+            from_force = 0.5 * link.spring_const * spring_displacement * force_dir -  0.7* node_from.0.vel;
+            to_force = -0.5 * link.spring_const * spring_displacement * force_dir + 0.7* node_to.0.vel;
 
         }
         else{
