@@ -189,7 +189,7 @@ fn create_light(commands: &mut Commands, gizmo_store: &mut ResMut<GizmoConfigSto
     commands.spawn(point_light_bundle_2);
 
     // Gimzo config
-    let (_, light_config) = gizmo_store.config_mut::<LightGizmoConfigGroup>();
-    light_config.draw_all = true;
-    light_config.color = LightGizmoColor::Varied;
+    // let (_, light_config) = gizmo_store.config_mut::<LightGizmoConfigGroup>();
+    // light_config.draw_all = true;
+    // light_config.color = LightGizmoColor::Varied;
 }
