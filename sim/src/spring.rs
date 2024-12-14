@@ -408,14 +408,14 @@ pub fn update_link_physics(time: Res<Time>, mut links: Query<& mut Link>, mut no
         };
 
         // this force is applied in the axis colinear from node 1 to node 2
-        node_from_mut.0.sum_forces += from_force;
+        node_from_mut.0.sum_forces += from_force - to_force;
 
         let mut node_to_mut = match nodes.get_mut(link.to) {
             Ok(node) => node,
             Err(error) => panic!("Unable to get the node {error:?}"),
         };
 
-        node_to_mut.0.sum_forces += to_force;
+        node_to_mut.0.sum_forces += to_force - from_force;
     }
 }
 
