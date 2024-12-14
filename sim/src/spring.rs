@@ -377,14 +377,16 @@ pub fn update_link_physics(time: Res<Time>, mut links: Query<& mut Link>, mut no
         let force_dir = (node_to_pos - node_from_pos).normalize();
         let length = (node_to_pos - node_from_pos).length();
         let spring_displacement = length - link.orig_length;
-        const DAMPING: f32 = 0.3;
+        const DAMPING: f32 = 0.7;
         // positive -> spring is expanded
         // negative -> spring is contracted
 
         // old code
-        let force = -1. * link.spring_const * spring_displacement - (0.7 * (spring_displacement - link.delta_spring_length_pre)/delta_t);
-        link.delta_spring_length_pre = spring_displacement;
-        let from_force =  -0.5* force;
+        // velocity of the spring is change of spring displacement over time. v = delta x / delta t
+        let force = -1. * link.spring_const * spring_displacement - (DAMPING * (length - link.delta_spring_length_pre)/delta_t);
+        // let force = -1. * link.spring_const * spring_displacement - (DAMPING * (node_to.0.vel - node_from.0.vel)); // THIS IS WRONG, works in sim but wrong physics wise
+        link.delta_spring_length_pre = length;
+        let from_force =  -0.5* force * force_dir;
         let to_force = -from_force;
 
         // NEW CODE
