@@ -47,7 +47,7 @@ fn main() {
         // ----------------------------------------------------------------------------
         // Draw the coordinate grid
         // TODO: making this a keyboard toggle would be useful
-        // .add_systems(Startup, scene::draw_xyz)
+        .add_systems(Startup, scene::draw_xyz)
         // ----------------------------------------------------------------------------
         // Generate a lattice structure
         .add_systems(
