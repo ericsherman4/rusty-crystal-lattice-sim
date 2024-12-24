@@ -1,5 +1,5 @@
 use crate::config::{axis_config, cam_config, colors_config, lattice_config, lights_config};
-use bevy::prelude::*;
+use bevy::{math::VectorSpace, prelude::*};
 use smooth_bevy_cameras::controllers::unreal::{UnrealCameraBundle, UnrealCameraController};
 use strum::IntoEnumIterator;
 use strum_macros::EnumIter;
@@ -19,12 +19,12 @@ enum Axis {
 pub fn setup(
     mut commands: Commands,
     mut config_store: ResMut<GizmoConfigStore>,
-    mut _meshes: ResMut<Assets<Mesh>>,
-    mut _materials: ResMut<Assets<StandardMaterial>>,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
     create_light(&mut commands, &mut config_store);
     create_cameras(&mut commands);
-    // create_ground(&mut commands,&mut meshes, &mut materials);
+    create_ground(&mut commands,&mut meshes, &mut materials);
 }
 
 pub fn draw_xyz(
@@ -91,16 +91,20 @@ fn create_axis(
 }
 
 /// Create a ground to help with lighting
-// fn create_ground(
-//     commands:&mut Commands,
-//     mut meshes: ResMut<Assets<Mesh>>,
-//     mut materials: ResMut<Assets<StandardMaterial>>,
-// ) {
-//     commands.spawn((
-//         Mesh3d(meshes.add(Plane3d::default().mesh().size(50.0, 50.0).subdivisions(10))),
-//         MeshMaterial3d(materials.add(Color::from(SILVER))),
-//     ));
-// }
+fn create_ground(
+    commands:&mut Commands,
+    meshes: &mut ResMut<Assets<Mesh>>,
+    materials: &mut ResMut<Assets<StandardMaterial>>,
+) {
+    commands.spawn(
+        PbrBundle {
+            mesh: meshes.add(Plane3d::default().mesh().size(200.0,200.0).subdivisions(10)),
+            material: materials.add(Color::Srgba(Srgba::hex("1f1f1f").unwrap())),
+            transform: Transform::from_xyz(0.0, -7.0, 0.0),
+            ..default()
+        }
+    );
+}
 
 //////////////////////////////////////////////////
 /// CAMERAS
@@ -120,8 +124,8 @@ fn create_cameras(commands: &mut Commands) {
         // looking at is how to orient
         // y is up in bevy
 
-        // TODO: fix this, camera is not looking at it's target cause when you move forward, i fly
-        // right through the 0,0,0 origin. irrespective of what height the camera ia at.
+        // im not sure of the difference of setting here verses setting it with the unreal camera.
+        // im not even sure i need both?? 
         transform: Transform::from_translation(STARTING_CAM_POS).looking_at(target, Vec3::Y),
         ..default()
     };
@@ -129,7 +133,7 @@ fn create_cameras(commands: &mut Commands) {
     let unreal_camera = UnrealCameraBundle::new(
         UnrealCameraController::default(),
         STARTING_CAM_POS,
-        Vec3::new(0., 0., 0.),
+        target,
         Vec3::Y,
     );
 
@@ -148,6 +152,17 @@ fn create_cameras(commands: &mut Commands) {
 /// Create a light in the scene
 fn create_light(commands: &mut Commands, gizmo_store: &mut ResMut<GizmoConfigStore>) {
     // Light
+
+
+    let mut new_pos = Transform::from_translation(
+        Vec3::splat(lattice_config::DIM as f32 * lattice_config::STARTING_LINK_LEN + lattice_config::STARTING_LINK_LEN*3.)
+    ).looking_at(Vec3::new(5.0, 0.0, 5.0), Vec3::Y);
+    // new_pos.translation.z += 5.0;
+    // new_pos.translation.x += 5.0;
+
+    // let mut new_pos = Transform::from_xyz(0.0,20.0,0.0).looking_at(Vec3::ZERO, Vec3::Y);
+
+
     //TODO: lights are confusing me, they are working backwards as i would expect them to.
     // like placing the light at all postivies values and spawning the camera there, looking at the cube
     // everything is in a shadow.
@@ -179,14 +194,50 @@ fn create_light(commands: &mut Commands, gizmo_store: &mut ResMut<GizmoConfigSto
         },
         // transform: Transform::from_translation(lights_config::POS_2),
         transform: Transform::from_translation(
-            Vec3::splat(-1. * lattice_config::DIM as f32 * lattice_config::STARTING_LINK_LEN + lattice_config::STARTING_LINK_LEN*2.)
+            Vec3::splat(-1. * lattice_config::DIM as f32 * lattice_config::STARTING_LINK_LEN + lattice_config::STARTING_LINK_LEN*3.)
         ).looking_at(Vec3::ZERO, Vec3::Y),
+        ..default()
+    };
+
+    let point_light_bundle_3 = SpotLightBundle {
+        spot_light: SpotLight {
+            shadows_enabled: true,
+            shadow_depth_bias: 0.3,
+            intensity: 20_000_000.,
+            range: 50.,
+            color: Color::Srgba(Srgba::WHITE),
+            ..default()
+        },
+        // transform: Transform::from_translation(lights_config::POS_2),
+        transform: new_pos,
+        ..default()
+    };
+
+
+    let mut shadow_behind_light = Transform::from_translation(-1.0 * Vec3::splat(lattice_config::DIM as f32 * lattice_config::STARTING_LINK_LEN - 3.0));
+    shadow_behind_light.translation.y = shadow_behind_light.translation.y*-1.0 + 6.0;
+    shadow_behind_light.translation.x += 3.0;
+    shadow_behind_light.look_at(Vec3::splat(lattice_config::DIM as f32 * lattice_config::STARTING_LINK_LEN)/2.0, Vec3::Y);
+
+    let point_light_bundle_4 = SpotLightBundle {
+        spot_light: SpotLight {
+            shadows_enabled: true,
+            shadow_depth_bias: 0.3,
+            intensity: 20_000_000.,
+            range: 50.,
+            color: Color::Srgba(Srgba::WHITE),
+            ..default()
+        },
+        // transform: Transform::from_translation(lights_config::POS_2),
+        transform: shadow_behind_light,
         ..default()
     };
 
     // Light spawn
     commands.spawn(point_light_bundle_1);
     commands.spawn(point_light_bundle_2);
+    commands.spawn(point_light_bundle_3);
+    commands.spawn(point_light_bundle_4);
 
     // Gimzo config
     // let (_, light_config) = gizmo_store.config_mut::<LightGizmoConfigGroup>();
