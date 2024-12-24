@@ -41,13 +41,13 @@ fn main() {
         // )
         // ----------------------------------------------------------------------------
         // Draw the initial scene and set background color
-        .insert_resource(ClearColor(Srgba::hex("98b0d3").unwrap().into()))
+        .insert_resource(ClearColor(Srgba::hex("1f1f1f").unwrap().into()))
         // .insert_resource(ClearColor(Color::Srgba(Srgba::WHITE)))
         .add_systems(Startup, scene::setup)
         // ----------------------------------------------------------------------------
         // Draw the coordinate grid
         // TODO: making this a keyboard toggle would be useful
-        .add_systems(Startup, scene::draw_xyz)
+        // .add_systems(Startup, scene::draw_xyz)
         // ----------------------------------------------------------------------------
         // Generate a lattice structure
         .add_systems(
