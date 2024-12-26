@@ -18,7 +18,7 @@ use smooth_bevy_cameras::LookTransformPlugin;
 
 //TODO: ADD THIS FPS OVERLAY https://bevyengine.org/examples/ui-user-interface/text/
 
-const START_DELAY: u64 = 4;
+const START_DELAY: u64 = 5;
 
 fn main() {
     App::new()
@@ -42,6 +42,10 @@ fn main() {
         // ----------------------------------------------------------------------------
         // Draw the initial scene and set background color
         .insert_resource(ClearColor(Srgba::hex("1f1f1f").unwrap().into()))
+        // .insert_resource(AmbientLight {
+        //     brightness: 100.0,
+        //     ..default()
+        // })
         // .insert_resource(ClearColor(Color::Srgba(Srgba::WHITE)))
         .add_systems(Startup, scene::setup)
         // ----------------------------------------------------------------------------
@@ -72,6 +76,8 @@ fn main() {
                 spring::update_spring
             ).chain().run_if(repeating_after_delay(Duration::from_secs(START_DELAY))),
         )
+
+        // .add_systems(Update, scene::animate_ground)
         // ----------------------------------------------------------------------------
         // Run it
         .run();
