@@ -213,6 +213,7 @@ fn create_all_nodes(
         }
     }
 
+    println!("Number of lattice nodes is {}", lattice_nodes.data.len());
     debug_assert_eq!(
         (calc_num_lattice_nodes(lattice_config::DIM)) as usize,
         lattice_nodes.data.len()
