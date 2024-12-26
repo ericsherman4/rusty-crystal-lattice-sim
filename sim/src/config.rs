@@ -17,7 +17,7 @@ pub mod lattice_config {
     pub const LINK_VISIBILITY: Visibility = Visibility::Visible;
 
     pub const NODE_RADIUS: f32 = 0.025;
-    pub const NODE_MASS: f32 = 40.0;
+    pub const NODE_MASS: f32 = 25.0;
 
     pub const SPRING_CONST: f32 = 8.0;
 
@@ -37,7 +37,7 @@ pub mod lights_config {
 
 pub mod cam_config {
     use bevy::math::Vec3;
-    pub const POS: Vec3 = Vec3::new(-11., 11., -11.0);
+    pub const POS: Vec3 = Vec3::new(-10., 11., -10.0);
 }
 
 pub mod axis_config {

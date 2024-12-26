@@ -298,6 +298,7 @@ pub fn generate_lattice(
                     // Generate a random color
                     // let color: Color = Color::srgb(rng.sample(dist), rng.sample(dist), rng.sample(dist));
 
+                    let emissive =  Color::srgb(position.x*0.5, position.y*0.5, position.z*0.5);
                     let color: Color = Color::srgb(position.x, position.y, position.z);
 
                     // Create a new Link / Spring
@@ -305,7 +306,11 @@ pub fn generate_lattice(
                     commands.spawn((
                         PbrBundle {
                             mesh: meshes.add(link.create_mesh()),
-                            material: materials.add(color),
+                            material: materials.add(StandardMaterial{
+                                base_color: color,
+                                // emissive: emissive.into(),
+                                ..default()
+                            }),
                             transform: Transform::from_translation(
                                 // This is left as is instead of feeding length because
                                 // node_data stores it is a 1x1x1 cube internally so it can use indexes directly
