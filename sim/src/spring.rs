@@ -290,9 +290,7 @@ pub fn generate_lattice(
 
                     // Determine the length of the spring, diagonal springs will not be the same starting length
                     // as horizontal and vertical ones
-                    let length = (to_node_pos.as_vec3() * lattice_config::STARTING_LINK_LEN
-                        - curr_node_pos.as_vec3() * lattice_config::STARTING_LINK_LEN)
-                        .length();
+                    let length = (to_node_pos.as_vec3() - curr_node_pos.as_vec3()).length();
 
                     // Generate a color that creates a gradient across the cube
                     let position = curr_node_pos.as_vec3() / nodes_dim as f32;
