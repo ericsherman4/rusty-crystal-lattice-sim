@@ -7,6 +7,25 @@ use rand::SeedableRng;
 use rand_chacha::ChaCha8Rng;
 
 //////////////////////////////////////////////////
+/// GENERAL SIMULATION STUFF
+//////////////////////////////////////////////////
+
+#[derive(Resource)]
+pub struct SimulationData {
+    kinetic_energy: f32,
+}
+
+impl Default for SimulationData {
+    fn default() -> Self {
+        SimulationData {
+            kinetic_energy: 0.0,
+        }
+    }
+}
+
+
+
+//////////////////////////////////////////////////
 /// NODE
 //////////////////////////////////////////////////
 
@@ -333,6 +352,19 @@ pub fn generate_lattice(
     debug_assert_eq!(counter, num_links);
 }
 
+
+
+pub fn print_kinetic_energy(
+    sim_data: Res<SimulationData>,
+) {
+    println!("{}", sim_data.kinetic_energy);
+}
+
+
+
+
+
+
 // to start the springs are not compressed at all and should not exert any forces.
 // we initialize the sum forces on Node to zero.
 // the nodes are moving though.
@@ -341,9 +373,15 @@ pub fn generate_lattice(
 // TODO: implement them separetly and then curious the performance boost when you combine them
 
 /// Update the state of the nodes and their positions
-pub fn update_nodes_state(time: Res<Time>, mut query: Query<(&mut Node, &mut Transform)>) {
+pub fn update_nodes_state(
+    time: Res<Time>, 
+    mut query: Query<(&mut Node, &mut Transform)>,
+    mut sim_data: ResMut<SimulationData>,
+) {
     let delta_t = time.delta_seconds();
     // println!("Elasped time is {}", delta_t);
+
+    let mut total_kinetic_energy = 0.0;
 
     for (mut node, mut transform) in &mut query {
         // update vel and pos
@@ -356,7 +394,11 @@ pub fn update_nodes_state(time: Res<Time>, mut query: Query<(&mut Node, &mut Tra
 
         // zero out sum forces
         node.sum_forces = Vec3::ZERO;
+        let velocity_magnitude = node.vel.length();
+        total_kinetic_energy += 0.5*node.mass * velocity_magnitude * velocity_magnitude;
     }
+
+    sim_data.kinetic_energy = total_kinetic_energy;
 }
 
 /// Update spring phyiscs
@@ -381,13 +423,13 @@ pub fn update_link_physics(time: Res<Time>, mut links: Query<& mut Link>, mut no
         let force_dir = (node_to_pos - node_from_pos).normalize();
         let length = (node_to_pos - node_from_pos).length();
         let spring_displacement = length - link.orig_length;
-        const DAMPING: f32 = 0.7;
+        const DAMPING: f32 = 0.9;
         // positive -> spring is expanded
         // negative -> spring is contracted
 
         // old code
         // velocity of the spring is change of spring displacement over time. v = delta x / delta t
-        let force = -1. * link.spring_const * spring_displacement - (DAMPING * (length - link.delta_spring_length_pre)/delta_t);
+        let force = -1. * link.spring_const * spring_displacement - (DAMPING * (spring_displacement - link.delta_spring_length_pre)/delta_t);
         // let force = -1. * link.spring_const * spring_displacement - (DAMPING * (node_to.0.vel - node_from.0.vel)); // THIS IS WRONG, works in sim but wrong physics wise
         link.delta_spring_length_pre = spring_displacement/5.0;
         let from_force =  -0.5* force * force_dir;
