@@ -2,7 +2,7 @@ use bevy::{
     diagnostic::{
         DiagnosticsStore, EntityCountDiagnosticsPlugin, FrameTimeDiagnosticsPlugin,
         LogDiagnosticsPlugin,
-    }, prelude::*, time::common_conditions::{once_after_delay, repeating_after_delay}
+    }, prelude::*, time::common_conditions::{on_timer, once_after_delay, repeating_after_delay}
 };
 use std::time::Duration;
 
@@ -18,16 +18,16 @@ use smooth_bevy_cameras::LookTransformPlugin;
 
 //TODO: ADD THIS FPS OVERLAY https://bevyengine.org/examples/ui-user-interface/text/
 
-const START_DELAY: u64 = 5;
+const START_DELAY: u64 = 1;
 
 fn main() {
     App::new()
         // plugins are pretty cool and enforces modular. if you don't want it, just remove it!
         .add_plugins((
             DefaultPlugins,
-            FrameTimeDiagnosticsPlugin,
-            EntityCountDiagnosticsPlugin::default(),
-            LogDiagnosticsPlugin::default(),
+            // FrameTimeDiagnosticsPlugin,
+            // EntityCountDiagnosticsPlugin::default(),
+            // LogDiagnosticsPlugin::default(),
             LookTransformPlugin,
             UnrealCameraPlugin::default(),
             //TODO: check out https://docs.rs/bevy/0.14.2/bevy/render/diagnostic/struct.RenderDiagnosticsPlugin.html
@@ -52,6 +52,9 @@ fn main() {
         // Draw the coordinate grid
         // TODO: making this a keyboard toggle would be useful
         // .add_systems(Startup, scene::draw_xyz)
+        // ----------------------------------------------------------------------------
+        .insert_resource(spring::SimulationData::default())
+        .add_systems(Update, spring::print_kinetic_energy.run_if(on_timer(Duration::from_secs_f32(0.5))))
         // ----------------------------------------------------------------------------
         // Generate a lattice structure
         .add_systems(
