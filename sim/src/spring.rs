@@ -195,6 +195,18 @@ fn create_all_nodes(
     let dist: Uniform<f32> =
         Uniform::new_inclusive(lattice_config::START_VEL_MIN, lattice_config::START_VEL_MAX);
 
+    let corner_indexes = lattice_config::DIM;
+    let corners = vec![
+        (0,0,0),
+        (corner_indexes,corner_indexes,corner_indexes),
+        (corner_indexes,0,0),
+        (0,corner_indexes,0),
+        (0,0,corner_indexes),
+        (corner_indexes,corner_indexes,0),
+        (corner_indexes,0,corner_indexes),
+        (0,corner_indexes,corner_indexes),
+    ];
+
     println!("Entering for loop");
     for z in 0..NODES_DIM {
         for y in 0..NODES_DIM {
@@ -208,26 +220,28 @@ fn create_all_nodes(
                 let starting_vel = Vec3::new(rng.sample(dist), rng.sample(dist), rng.sample(dist));
                 // let starting_vel = Vec3::new(rng.sample(dist), 0.0,0.0); //this yields cool results
 
-                println!("Staring vel {}", starting_vel);
+                // println!("Staring vel {}", starting_vel);
 
                 let node = Node {
                     pos: starting_pos,
                     vel: starting_vel,
                     ..default()
                 };
-                lattice_nodes.add(
-                    commands
-                        .spawn((
-                            PbrBundle {
-                                mesh: meshes.add(node.create_mesh()), // not ideal
-                                material: materials.add(colors_config::NODE_COLOR),
-                                transform: Transform::from_translation(node.pos),
-                                ..default()
-                            },
-                            node,
-                        ))
-                        .id(),
-                );
+
+                let bundle = PbrBundle {
+                    mesh: meshes.add(node.create_mesh()), // not ideal
+                    material: materials.add(colors_config::NODE_COLOR),
+                    transform: Transform::from_translation(node.pos),
+                    ..default()
+                };
+
+                // it should be anchored
+                if corners.contains(&(x,y,z)) {
+                    lattice_nodes.add(commands.spawn((bundle,node, Static)).id());
+                }
+                else {  
+                    lattice_nodes.add(commands.spawn((bundle,node)).id());
+                }
             }
         }
     }
@@ -375,7 +389,7 @@ pub fn print_kinetic_energy(
 /// Update the state of the nodes and their positions
 pub fn update_nodes_state(
     time: Res<Time>, 
-    mut query: Query<(&mut Node, &mut Transform)>,
+    mut nodes: Query<(&mut Node, &mut Transform), Without<Static>>,
     mut sim_data: ResMut<SimulationData>,
 ) {
     let delta_t = time.delta_seconds();
@@ -383,13 +397,11 @@ pub fn update_nodes_state(
 
     let mut total_kinetic_energy = 0.0;
 
-    for (mut node, mut transform) in &mut query {
+    for (mut node, mut transform) in nodes.iter_mut() {
         // update vel and pos
         let acc = node.sum_forces / node.mass;
         node.vel = node.vel + acc * delta_t;
-
         node.pos = node.pos + node.vel * delta_t;
-
         transform.translation = node.pos;
 
         // zero out sum forces
@@ -423,34 +435,18 @@ pub fn update_link_physics(time: Res<Time>, mut links: Query<& mut Link>, mut no
         let force_dir = (node_to_pos - node_from_pos).normalize();
         let length = (node_to_pos - node_from_pos).length();
         let spring_displacement = length - link.orig_length;
-        const DAMPING: f32 = 0.9;
+        const DAMPING: f32 = 0.7; // 30 at damping and vel at 20 is pretty cool
         // positive -> spring is expanded
         // negative -> spring is contracted
 
-        // old code
         // velocity of the spring is change of spring displacement over time. v = delta x / delta t
-        let force = -1. * link.spring_const * spring_displacement - (DAMPING * (spring_displacement - link.delta_spring_length_pre)/delta_t);
+        let damping_force = DAMPING * (spring_displacement - link.delta_spring_length_pre)/delta_t;
+        let total_force = -1. * link.spring_const * spring_displacement - damping_force;
         // let force = -1. * link.spring_const * spring_displacement - (DAMPING * (node_to.0.vel - node_from.0.vel)); // THIS IS WRONG, works in sim but wrong physics wise
-        link.delta_spring_length_pre = spring_displacement/5.0;
-        let from_force =  -0.5* force * force_dir;
+        // link.delta_spring_length_pre = spring_displacement/5.0; // results in more appealing simulations
+        link.delta_spring_length_pre = spring_displacement;
+        let from_force =  -0.5* total_force * force_dir;
         let to_force = -from_force;
-
-        // NEW CODE
-        // let from_force: Vec3;
-        // let to_force: Vec3;
-        // if true {
-        //     // damping
-        //     from_force = 0.5 * link.spring_const * spring_displacement * force_dir -  DAMPING* node_from.0.vel;
-        //     to_force = -0.5 * link.spring_const * spring_displacement * force_dir - DAMPING* node_to.0.vel;
-
-        // }
-        // else{
-        //     // no damping
-        //     from_force = 0.5* (link.spring_const * spring_displacement) * force_dir;
-        //     to_force = -from_force;
-        // }
-
-
 
 
         let mut node_from_mut = match nodes.get_mut(link.from) {
@@ -500,9 +496,12 @@ pub fn update_spring(
         // The secondary axis - just using Y, I assume X would work, I want to point to a vector orthogonal to the dir vector.
         // I get this vector by crossing the direction vector node_from vector.
         // *transform = transform.aligned_by(Vec3::Z, dir, Vec3::Y, dir.cross(node_from.translation))
+        // okay the cross thing is nice but i think that was causing a lot fo them to spin which makes sense
+        // because dir cross node_from trans could point in any outward direction really.
+        *transform = transform.aligned_by(Vec3::Z, dir, Vec3::Y, Vec3::splat(100.0)); 
         // Update, because i dont care about secondary axis, applied what I learned from above to make looking_at work.
         // same principals apply, I want to look at the node named node_to and I want a vector orthogonal ot the dir vector.
-        *transform = transform.looking_at(node_to.translation,  dir.cross(node_from.translation))
+        // *transform = transform.looking_at(node_to.translation,  dir.cross(node_from.translation))
 
         // note that the following doesnt work but produces awesome results
         // *transform = transform.looking_to(node_to.translation,  dir.cross(node_from.translation))
