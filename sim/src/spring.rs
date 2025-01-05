@@ -3,22 +3,56 @@
 use bevy::{ecs::query, prelude::*};
 use rand::prelude::*;
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// Atom
 #[derive(Component)]
 pub struct Node {
     pos: Vec3,
     vel: Vec3,
-    sum_forces: Vec3,
+    sum_forces: Vec3, // All forces exerted on the link
     mesh: Mesh,
 }
 
+// Bond / Spring
 #[derive(Component)]
 pub struct Link {
     spring_const: f32,
     orig_length: f32,
-    pub to: Entity,
-    pub from: Entity,
+    pub to: Entity, // Atom link is connected to
+    pub from: Entity, // Atom link is connected from
     mesh: Mesh,
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 impl Node {
     fn new(pos: Vec3, vel: Vec3, rad: f32) -> Self {
@@ -68,6 +102,14 @@ pub fn create_random_vector(rng: &mut ThreadRng) -> Vec3 {
     }
 }
 
+
+
+
+
+
+
+
+
 pub fn create_spring(
     commands: &mut Commands,
     meshes: &mut ResMut<Assets<Mesh>>,
@@ -79,9 +121,9 @@ pub fn create_spring(
     let node2_pos = create_random_vector(&mut rng);
 
     // Create node components
-    let sphere_rad: f32 = 0.3;
-    let node1 = Node::new(node1_pos, Vec3::ZERO, sphere_rad);
-    let node2 = Node::new(node2_pos, Vec3::ZERO, sphere_rad);
+    let sphere_radius: f32 = 0.3;
+    let node1 = Node::new(node1_pos, Vec3::ZERO, sphere_radius);
+    let node2 = Node::new(node2_pos, Vec3::ZERO, sphere_radius);
 
     // Spawn nodes
     let node1_ent = commands
@@ -130,6 +172,16 @@ pub fn create_spring(
         link,
     ));
 }
+
+
+
+
+
+
+
+
+
+
 
 // lets start by fixing node1 and only doing node2
 // F = -k(delta X (from nominal))
