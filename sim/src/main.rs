@@ -1,47 +1,75 @@
-use bevy::{prelude::*, transform};
-use rand::Rng;
+use bevy::prelude::*;
 use std::time::Duration;
 
 
 mod spring;
 mod scene;
 
+
 // https://docs.rs/smooth-bevy-cameras/0.11.0/smooth_bevy_cameras/
 // https://github.com/bonsairobo/smooth-bevy-cameras/blob/main/examples/simple_unreal.rs
 use smooth_bevy_cameras::controllers::unreal::UnrealCameraPlugin;
 use smooth_bevy_cameras::LookTransformPlugin;
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 fn main() {
     App::new()
-        // plugins are pretty cool and enforces modular. if you don't want it, just remove it!
+        // Add plugins 
         .add_plugins((
             DefaultPlugins,
             LookTransformPlugin,
             UnrealCameraPlugin::default(),
         ))
 
+        // Setup camera, lighting, and insert a spring
+        .add_systems(Startup, (scene::setup, insert_spring))
+
+        // Update the spring every 1500ms
         .insert_resource(Time::<Fixed>::from_duration(Duration::from_millis(1500)))
-        
-
-        // Draw the initial scene
-        .add_systems(Startup, scene::setup)
-
-        // not currently working
-        .add_systems(Update, scene::camera_reset_control) 
-
-        .add_systems(Startup, insert_spring)
-
         .add_systems(FixedUpdate, update_spring)
 
-        // time example https://github.com/bevyengine/bevy/blob/latest/examples/time/time.rs
-        // .add_systems(FixedUpdate, test_ids)
-        // .add_systems(Startup, test_ids)
-
-        // .add_systems(FixedUpdate, get_links)
-
-        // Run it
+        // Run the app
         .run()
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 #[derive(Component)]
 pub struct Node
@@ -140,23 +168,21 @@ fn insert_spring(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
-    
-
     spring::create_spring(&mut commands, &mut meshes, &mut materials);
     println!("Time is {}", time.elapsed().as_secs())
 }
 
+
 fn update_spring(
-    // Link is defined in spring, you need to use spring::Link. not really sure how this compiled lol
-    mut query : Query<(&mut Transform, &spring::Link), Without<spring::Node>>,
+    mut links : Query<(&mut Transform, &spring::Link), Without<spring::Node>>,
     mut nodes: Query<(Entity, &mut spring::Node, &mut Transform),  Without<spring::Link>>
 ) {
 
     let mut rng = rand::thread_rng();
     
-    for (mut transform, link) in query.iter_mut() {
-        let new_node1_pos = Vec3 {x: rng.gen_range(-10.0..10.0), y: rng.gen_range(-10.0..10.0), z: rng.gen_range(-10.0..10.0) };
-        let new_node2_pos = Vec3 {x: rng.gen_range(-10.0..10.0), y: rng.gen_range(-10.0..10.0), z: rng.gen_range(-10.0..10.0) };
+    for (mut transform, link) in links.iter_mut() {
+        let new_node1_pos = spring::create_random_vector(&mut rng);
+        let new_node2_pos = spring::create_random_vector(&mut rng);
 
         let (_,_,mut node1) = nodes.get_mut(link.to).expect("help");
         node1.translation = new_node1_pos;
@@ -167,13 +193,10 @@ fn update_spring(
         let dir =  new_node1_pos - new_node2_pos;
         let length = dir.length();
         let res = dir.normalize()*(length/2.) + new_node2_pos;
-
-
-        // this applies to link
         transform.translation =  res;
+
         let fwd = transform.forward().xyz();
         transform.rotate(Quat::from_rotation_arc(fwd, dir.normalize()));
-
     }
 }
 
