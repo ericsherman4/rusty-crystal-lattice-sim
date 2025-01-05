@@ -2,9 +2,7 @@ use bevy::prelude::*;
 use strum::IntoEnumIterator;
 use strum_macros::EnumIter;
 
-use smooth_bevy_cameras::controllers::unreal::{
-    UnrealCameraBundle, UnrealCameraController,
-};
+use smooth_bevy_cameras::controllers::unreal::{UnrealCameraBundle, UnrealCameraController};
 
 #[derive(EnumIter)]
 enum Axis {
@@ -25,7 +23,6 @@ pub fn setup(
     create_light(&mut commands);
     create_coord_system(&mut commands, &mut meshes, &mut materials);
     create_cameras(&mut commands);
-
 }
 
 /// Handle keyboard input relating to the camera
@@ -128,8 +125,7 @@ fn create_coord_system(
 
 /// Create a light in the scene
 fn create_light(commands: &mut Commands) {
-
-    let pos:f32 = 3.0;
+    let pos: f32 = 3.0;
 
     // Light
     let point_light_bundle_1 = PointLightBundle {
