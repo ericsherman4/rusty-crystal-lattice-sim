@@ -49,6 +49,7 @@
         // disable any error or warning
         "editorWarning.foreground":"#00000000",
         "editorError.foreground":"#00000000",
+        "scrollbarSlider.background": "#616161",
     }
 
     "editor.semanticTokenColorCustomizations": {

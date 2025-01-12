@@ -115,10 +115,9 @@ pub fn create_spring(
     meshes: &mut ResMut<Assets<Mesh>>,
     materials: &mut ResMut<Assets<StandardMaterial>>,
 ) {
-    // Get two position vectors
-    let mut rng = rand::thread_rng();
-    let node1_pos = create_random_vector(&mut rng);
-    let node2_pos = create_random_vector(&mut rng);
+    // Create two position vectors
+    let node1_pos = Vec3::new(0.0, 0.0, 1.0);
+    let node2_pos = Vec3::new(1.0, 0.0, 0.0);
 
     // Create node components
     let sphere_radius: f32 = 0.3;
@@ -150,13 +149,14 @@ pub fn create_spring(
         ))
         .id();
 
+    // Create Link
+    // we need spring const, spring original length, node 1 entity ID, node 2 entity ID
     let dir = node1_pos - node2_pos;
     let link = Link::new(2., dir.length(), 0.2, node1_ent, node2_ent);
 
     // Link origin is at the center of the mesh
     let center_pos = dir.normalize() * (dir.length() / 2.) + node2_pos;
     let mut link_trans = Transform::from_translation(center_pos);
-
     link_trans.rotate(Quat::from_rotation_arc(
         link_trans.forward().xyz(),
         dir.normalize(),
