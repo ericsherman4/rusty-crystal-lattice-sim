@@ -1,5 +1,69 @@
 {
     "cSpell.ignoreWords": [
         "Srgba"
-    ]
+    ],
+
+    // disable gitblame
+    "gitlens.currentLine.enabled": false,
+    "editor.codeLens": false,
+
+    // Disable rust analyzer implementions
+    "rust-analyzer.lens.implementations.enable": false,
+    "rust-analyzer.diagnostics.disabled": [
+        "inactive-code"
+    ],
+
+    // editor settings
+    "editor.lineNumbers": "off",
+    "editor.lightbulb.enabled": "off",
+    "editor.renderLineHighlight": "none",
+    "editor.guides.indentation": true,
+    
+    // remove highlighting like words
+    "editor.occurrencesHighlight": "off",
+    "editor.selectionHighlight": false,
+    "editor.matchBrackets": "never",
+
+    // remove documentation previews and all that
+    // https://codewithsusan.com/notes/vscode-disable-code-hint-popups
+    "workbench.editor.enablePreview":false,
+    "editor.quickSuggestions": {
+        "other": false,
+        "comments": false,
+        "strings": false
+    },
+    "editor.hover.enabled": false,
+    "editor.parameterHints.enabled": false,
+
+
+    
+    "workbench.colorCustomizations": 
+    {
+        // change cursor color
+        "editorCursor.foreground":  "#027ea4",
+        "editor.selectionBackground" : "#ffffff30",
+        "editor.selectionHighlightBackground" : "#c1c1c134",
+        
+        // remove git add, remove, modify colors
+        "editorGutter.addedBackground": "#052028",
+        "editorGutter.deletedBackground": "#052028",
+        "editorGutter.modifiedBackground": "#052028",
+        "editor.background": "#052028",
+
+        // disable any error or warning
+        "editorWarning.foreground":"#00000000",
+        "editorError.foreground":"#00000000",
+
+        // scroll bar color
+        "scrollbarSlider.background": "#616161",
+    },
+	
+	"editor.semanticTokenColorCustomizations": {
+        "enabled": true,
+        "rules": {
+            "*.mutable": {
+                "underline": false,
+            }
+        }
+    }
 }
