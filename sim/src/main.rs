@@ -30,7 +30,7 @@ fn main() {
         // Setup camera, lighting, and insert a spring
         .add_systems(Startup, (scene::setup, insert_spring))
         // Update the spring every 1500ms
-        .insert_resource(Time::<Fixed>::from_duration(Duration::from_millis(1500)))
+        .insert_resource(Time::<Fixed>::from_duration(Duration::from_millis(20)))
         .add_systems(FixedUpdate, update_spring)
         // Run the app
         .run()
@@ -76,12 +76,16 @@ use spring::Link;
 fn update_spring(
     mut links: Query<(&mut Transform, &Link)>,
     mut nodes: Query<(&mut Transform), (With<Node>, Without<Link>)>,
+    time: Res<Time>,
 ) {
     let mut rng = rand::thread_rng();
 
     for (mut link_transform, link) in links.iter_mut() {
-        let new_node1_pos = spring::create_random_vector(&mut rng);
-        let new_node2_pos = spring::create_random_vector(&mut rng);
+        // let new_node1_pos = spring::create_random_vector(&mut rng);
+        // let new_node2_pos = spring::create_random_vector(&mut rng);
+        let sin_pos = 3.0*f32::sin(time.elapsed_seconds()) + 3.0;
+        let new_node1_pos = Vec3::X * sin_pos + Vec3::Y;
+        let new_node2_pos = Vec3::Z * sin_pos + Vec3::Y;
 
         let mut node1 = nodes.get_mut(link.to).expect("Node should exist but doesn't");
         node1.translation = new_node1_pos;
@@ -95,6 +99,8 @@ fn update_spring(
 
         let fwd = link_transform.forward().xyz();
         link_transform.rotate(Quat::from_rotation_arc(fwd, dir.normalize()));
+
+        link_transform.scale.z = dir.length() / link.orig_length;
     }
 }
 

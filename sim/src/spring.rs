@@ -30,7 +30,7 @@ pub struct Node {
 #[derive(Component)]
 pub struct Link {
     spring_const: f32,
-    orig_length: f32,
+    pub orig_length: f32,
     pub to: Entity, // Atom link is connected to
     pub from: Entity, // Atom link is connected from
     mesh: Mesh,
