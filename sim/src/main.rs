@@ -9,7 +9,7 @@ use std::time::Duration;
 mod config; // this allows me to do use crate::config::colors in other files in this folder
 mod resources;
 mod scene;
-mod spring;
+mod lattice;
 
 // https://docs.rs/smooth-bevy-cameras/0.11.0/smooth_bevy_cameras/
 // https://github.com/bonsairobo/smooth-bevy-cameras/blob/main/examples/simple_unreal.rs
@@ -50,19 +50,19 @@ fn main() {
         // .add_systems(Startup, scene::draw_xyz)
         // ------------------------------------------------------------------------------------------------------
         // Print kinetic energy of the simulation
-        .insert_resource(spring::SimulationData::default())
-        .add_systems(Update, spring::update_center_of_mass)
-        .add_systems(Update, spring::print_kinetic_energy.run_if(on_timer(Duration::from_secs_f32(0.5))))
+        .insert_resource(lattice::SimulationData::default())
+        .add_systems(Update, lattice::update_center_of_mass)
+        .add_systems(Update, lattice::print_kinetic_energy.run_if(on_timer(Duration::from_secs_f32(0.5))))
         // ------------------------------------------------------------------------------------------------------
         // ------------------------------------------------------------------------------------------------------
         // Lock and unlock the camera and rotate it using arrow keys
         .add_systems(Update, scene::lock_camera.run_if(input_just_pressed(KeyCode::KeyL)))
-        .add_systems(Update,spring::rotate_around_center)
+        .add_systems(Update,lattice::rotate_around_center)
         // ------------------------------------------------------------------------------------------------------
         // Generate a lattice structure
         .add_systems(
             Update,
-            (resources::add_rng, spring::generate_lattice)
+            (resources::add_rng, lattice::generate_lattice)
             .chain().run_if(once_after_delay(Duration::from_secs(START_DELAY)))
         )
         // ------------------------------------------------------------------------------------------------------
@@ -78,7 +78,7 @@ fn main() {
             (
                 // spring::update_nodes_state, 
                 // spring::update_link_physics,
-                spring::update_spring
+                lattice::update_spring
             ).chain().run_if(repeating_after_delay(Duration::from_secs(START_DELAY))),
         )
         // ------------------------------------------------------------------------------------------------------
