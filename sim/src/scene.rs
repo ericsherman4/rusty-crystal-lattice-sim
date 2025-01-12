@@ -24,7 +24,7 @@ pub fn setup(
 ) {
     create_light(&mut commands, &mut config_store);
     create_cameras(&mut commands);
-    create_ground(&mut commands,&mut meshes, &mut materials);
+    // create_ground(&mut commands,&mut meshes, &mut materials);
 }
 
 pub fn draw_xyz(
@@ -166,6 +166,16 @@ fn create_cameras(commands: &mut Commands) {
         .insert(unreal_camera);
 }
 
+pub fn lock_camera(
+    mut camera_controller: Query<&mut UnrealCameraController>,
+) {
+    for mut cam in camera_controller.iter_mut() {
+        cam.enabled ^= true;
+        println!("Cam is now {}", cam.enabled)
+    }
+}
+
+
 //////////////////////////////////////////////////
 /// LIGHTING
 //////////////////////////////////////////////////
@@ -192,7 +202,7 @@ fn create_light(commands: &mut Commands, gizmo_store: &mut ResMut<GizmoConfigSto
     // everything is in a shadow.
     let point_light_bundle_1 = SpotLightBundle {
         spot_light: SpotLight {
-            shadows_enabled: true,
+            shadows_enabled: lights_config::SPOT_LIGHT_SHADOWS,
             shadow_depth_bias: 0.3,
             intensity: 20_000_000.,
             range: 50.,
@@ -209,7 +219,7 @@ fn create_light(commands: &mut Commands, gizmo_store: &mut ResMut<GizmoConfigSto
     // Second light
     let point_light_bundle_2 = SpotLightBundle {
         spot_light: SpotLight {
-            shadows_enabled: true,
+            shadows_enabled: lights_config::SPOT_LIGHT_SHADOWS,
             shadow_depth_bias: 0.3,
             intensity: 20_000_000.,
             range: 50.,
@@ -225,7 +235,7 @@ fn create_light(commands: &mut Commands, gizmo_store: &mut ResMut<GizmoConfigSto
 
     let point_light_bundle_3 = SpotLightBundle {
         spot_light: SpotLight {
-            shadows_enabled: true,
+            shadows_enabled: lights_config::SPOT_LIGHT_SHADOWS,
             shadow_depth_bias: 0.3,
             intensity: 20_000_000.,
             range: 50.,
@@ -245,7 +255,7 @@ fn create_light(commands: &mut Commands, gizmo_store: &mut ResMut<GizmoConfigSto
 
     let point_light_bundle_4 = SpotLightBundle {
         spot_light: SpotLight {
-            shadows_enabled: true,
+            shadows_enabled: lights_config::SPOT_LIGHT_SHADOWS,
             shadow_depth_bias: 0.3,
             intensity: 30_000_000.,
             range: 100.,
@@ -262,7 +272,7 @@ fn create_light(commands: &mut Commands, gizmo_store: &mut ResMut<GizmoConfigSto
     let camera_height = 30.0;
     let point_light_bundle_5 = SpotLightBundle {
         spot_light: SpotLight {
-            shadows_enabled: false,
+            shadows_enabled: lights_config::SPOT_LIGHT_SHADOWS,
             shadow_depth_bias: 0.3,
             intensity: 100_000_000.,
             range: 500.,
@@ -285,6 +295,7 @@ fn create_light(commands: &mut Commands, gizmo_store: &mut ResMut<GizmoConfigSto
     // let (_, light_config) = gizmo_store.config_mut::<LightGizmoConfigGroup>();
     // light_config.draw_all = true;
     // light_config.color = LightGizmoColor::Varied;
+
 }
 
 
