@@ -1,10 +1,8 @@
 use crate::config::{colors_config, lattice_config};
 use crate::resources::RandomSource;
-use bevy::prelude::*;
+use bevy::{color, prelude::*};
 use rand::distributions::Uniform;
 use rand::Rng;
-use rand::SeedableRng;
-use rand_chacha::ChaCha8Rng;
 
 //////////////////////////////////////////////////
 /// GENERAL SIMULATION STUFF
@@ -13,21 +11,59 @@ use rand_chacha::ChaCha8Rng;
 #[derive(Resource)]
 pub struct SimulationData {
     kinetic_energy: f32,
+    center_of_mass: Transform,
 }
 
 impl Default for SimulationData {
     fn default() -> Self {
         SimulationData {
             kinetic_energy: 0.0,
+            center_of_mass: Transform::from_translation(Vec3::ZERO),
         }
     }
 }
 
+pub fn rotate_around_center(
+    data: Res<SimulationData>,
+    mut camera: Query<&mut Transform, With<Camera>>,
+    time: Res<Time>,
+    keyboard: Res<ButtonInput<KeyCode>>,
+){
+    // MUST UNLOCK THE CAMERA FOR IT TO WORK
+
+    let mut camera = camera.single_mut();
+    
+    // let secondary_axis_rot_rate = 0.09* time.delta_seconds();
+    let secondary_axis_rot_rate = 0.0;
+    let primary_axis_rot_rate = 0.3 * time.delta_seconds();
+
+
+    if keyboard.pressed(KeyCode::ArrowRight) {
+        let rot = Quat::from_euler(EulerRot::YXZ, primary_axis_rot_rate, secondary_axis_rot_rate, secondary_axis_rot_rate);
+        camera.rotate_around(data.center_of_mass.translation, rot);
+    }
+    if keyboard.pressed(KeyCode::ArrowLeft) {
+        let rot = Quat::from_euler(EulerRot::YXZ, -primary_axis_rot_rate, -secondary_axis_rot_rate, -secondary_axis_rot_rate);
+        camera.rotate_around(data.center_of_mass.translation, rot);
+    }
+    if keyboard.pressed(KeyCode::ArrowUp) {
+        let rot = Quat::from_axis_angle(camera.right().into(), -primary_axis_rot_rate);
+        camera.rotate_around(data.center_of_mass.translation, rot);
+    }
+    if keyboard.pressed(KeyCode::ArrowDown) {
+        let rot = Quat::from_axis_angle(camera.right().into(), primary_axis_rot_rate);
+        camera.rotate_around(data.center_of_mass.translation, rot);
+    }
+}
 
 
 //////////////////////////////////////////////////
 /// NODE
 //////////////////////////////////////////////////
+
+/// If a node is spawned with a static component, it should not move
+#[derive(Component)]
+pub struct Static;
 
 #[derive(Component)]
 pub struct Node {
@@ -35,13 +71,6 @@ pub struct Node {
     vel: Vec3,        // meters/sec
     sum_forces: Vec3, //newtons
     mass: f32,        // kg
-}
-
-impl Node {
-    /// Create the mesh for the node
-    fn create_mesh(&self) -> Mesh {
-        Sphere::new(lattice_config::NODE_RADIUS).mesh().uv(32, 18)
-    }
 }
 
 impl Default for Node {
@@ -59,19 +88,15 @@ impl Default for Node {
 /// LINK
 //////////////////////////////////////////////////
 
-// i think what you could do is just give it a static component when you are generating the lattice
-// and if its in the right position, give it a static componennt and then in your updates, just make the node impossible to move.
 
-#[derive(Component)]
-pub struct Static;
 
+/// Links are massless.
+/// Using link / spring interchangably throughout the code
 #[derive(Component)]
 pub struct Link {
-    // Links are massless.
-    // Using link / spring interchangably throughout the code
     spring_const: f32,
     delta_spring_length_pre: f32, 
-    orig_length: f32, //TODO: maybe change to int so that all the scaling math is easier?
+    orig_length: f32,
     pub to: Entity,
     pub from: Entity,
 }
@@ -93,6 +118,7 @@ impl Link {
     }
 
     /// Create the mesh for the link
+    /// Can't clone the mesh because it will depend on original length
     fn create_mesh(&self) -> Mesh {
         Cuboid::new(
             lattice_config::LINK_RADIUS,
@@ -176,10 +202,7 @@ fn calc_num_lattice_links(dim: u32) -> u32 {
     }
 }
 
-// TODO: maybe this function could just be absorbed into lattice nodes and
-// then it just returns an object to generate_lattice.
-/// Spawn all of the nodes into the environment and store them
-/// in the lattice nodes struct
+/// Spawn all nodes into the world
 fn create_all_nodes(
     lattice_nodes: &mut LatticeNodes,
     commands: &mut Commands,
@@ -187,27 +210,29 @@ fn create_all_nodes(
     materials: &mut ResMut<Assets<StandardMaterial>>,
     random_source: &mut ResMut<RandomSource>,
 ) {
-    const NODES_DIM: u32 = lattice_config::DIM + 1;
-
-    // think you can only do this because there is one resource inserted?
-    // A: There can only be one type of a resource inserted. Otherwise, need to use ECS
+    // Create a uniform distribution for random numbers
     let rng = &mut random_source.0;
     let dist: Uniform<f32> =
         Uniform::new_inclusive(lattice_config::START_VEL_MIN, lattice_config::START_VEL_MAX);
 
-    let corner_indexes = lattice_config::DIM;
+    // Use array to specify which ones should be static
+    let corner_index = lattice_config::DIM;
     let corners = vec![
         (0,0,0),
-        (corner_indexes,corner_indexes,corner_indexes),
-        (corner_indexes,0,0),
-        (0,corner_indexes,0),
-        (0,0,corner_indexes),
-        (corner_indexes,corner_indexes,0),
-        (corner_indexes,0,corner_indexes),
-        (0,corner_indexes,corner_indexes),
+        (corner_index,corner_index,corner_index),
+        (corner_index,0,0),
+        (0,corner_index,0),
+        (0,0,corner_index),
+        (corner_index,corner_index,0),
+        (corner_index,0,corner_index),
+        (0,corner_index,corner_index),
     ];
 
-    println!("Entering for loop");
+    // Define some variables for generating all the nodes
+    const NODES_DIM: u32 = lattice_config::DIM + 1;
+    let node_mesh = Sphere::new(lattice_config::NODE_RADIUS).mesh().uv(32, 18);
+    
+    // Generate all nodes
     for z in 0..NODES_DIM {
         for y in 0..NODES_DIM {
             for x in 0..NODES_DIM {
@@ -218,9 +243,6 @@ fn create_all_nodes(
                 );
 
                 let starting_vel = Vec3::new(rng.sample(dist), rng.sample(dist), rng.sample(dist));
-                // let starting_vel = Vec3::new(rng.sample(dist), 0.0,0.0); //this yields cool results
-
-                // println!("Staring vel {}", starting_vel);
 
                 let node = Node {
                     pos: starting_pos,
@@ -229,13 +251,13 @@ fn create_all_nodes(
                 };
 
                 let bundle = PbrBundle {
-                    mesh: meshes.add(node.create_mesh()), // not ideal
+                    mesh: meshes.add(node_mesh.clone()), // not ideal
                     material: materials.add(colors_config::NODE_COLOR),
                     transform: Transform::from_translation(node.pos),
                     ..default()
                 };
 
-                // it should be anchored
+                // Check if it's a corner node and anchor it by spawning it with the static component.
                 if corners.contains(&(x,y,z)) {
                     lattice_nodes.add(commands.spawn((bundle,node, Static)).id());
                 }
@@ -253,9 +275,39 @@ fn create_all_nodes(
     );
 }
 
+fn out_of_bounds(vec: IVec3, bounds: i32) -> bool {
+    return vec.x < 0 
+        || vec.x >= bounds 
+        || vec.y < 0                 
+        || vec.y >= bounds 
+        || vec.z < 0 
+        || vec.z >= bounds;
+ }
+
+
 //////////////////////////////////////////////////
 /// SPRING SYSTEMS
 //////////////////////////////////////////////////
+
+pub fn update_center_of_mass(
+    mut data: ResMut<SimulationData>,
+    nodes: Query<&Node>,
+) {
+    let mut accum = Vec3::ZERO;
+    let mut count = 0;
+
+    for node in nodes.iter() {
+        count += 1;
+        accum += node.pos;
+    }
+
+    if count == 0 { return; }
+    
+    data.center_of_mass.translation = accum / count as f32;
+    // println!("initial COM is {}", data.center_of_mass.translation);
+}
+
+
 
 pub fn generate_lattice(
     mut commands: Commands,
@@ -263,63 +315,42 @@ pub fn generate_lattice(
     mut materials: ResMut<Assets<StandardMaterial>>,
     mut random_source: ResMut<RandomSource>,
 ) {
-    println!("Generating lattice");
-    // Turns out, you don't need all the directions cause you
-    // are only constructing the cube in one direction.
-    // This gets rid of of the duplication problem.
-    let dir_arr = [
-        IVec3::new(1, 0, 0),
-        IVec3::new(0, 1, 0),
-        IVec3::new(0, 0, 1),
-        IVec3::new(1, 1, 0),
-        IVec3::new(0, 1, 1),
-        IVec3::new(1, 0, 1),
-        IVec3::new(1, -1, 0),
-        IVec3::new(0, 1, -1),
-        IVec3::new(-1, 0, 1),
-    ];
+    println!("Generating Lattice");
 
-    // Generate all of the nodes first
+    // Generate all of the nodes first. They needed to be spawned so that we can 
+    // obtain the entity ID and store it in the link
     let mut node_data = LatticeNodes::new(lattice_config::DIM);
-    create_all_nodes(
-        &mut node_data,
-        &mut commands,
-        &mut meshes,
-        &mut materials,
-        &mut random_source,
-    );
-
-    let keyboard_mashing: u64 = 459347051375372;
-    let mut rng = ChaCha8Rng::seed_from_u64(keyboard_mashing);
-    let dist: Uniform<f32> = Uniform::new_inclusive(0.0, 1.0);
+    create_all_nodes( &mut node_data, &mut commands, &mut meshes, &mut materials, &mut random_source);
+    
+    // Turns out, you don't need all the directions cause you
+    // are only constructing the lattice in one direction.
+    // This gets rid of the duplication problem.
+    let dir_arr = [
+        IVec3::new(1, 0, 0), IVec3::new(0, 1, 0), IVec3::new(0, 0, 1), 
+        IVec3::new(1, 1, 0), IVec3::new(0, 1, 1), IVec3::new(1, 0, 1), 
+        IVec3::new(1, -1, 0), IVec3::new(0, 1, -1), IVec3::new(-1, 0, 1)
+    ];
    
-
-    // fill out and spawn all links
-    let nodes_dim = lattice_config::DIM + 1;
+    let nodes_dim: i32 = (lattice_config::DIM + 1).try_into().expect("Could not fit DIM in i32");
     let mut counter: u32 = 0;
+    
+    // Fill out and spawn all links
     for z in 0..nodes_dim {
         for y in 0..nodes_dim {
             for x in 0..nodes_dim {
-                // need to check 18 directions, jk 9 directions
-                // (because duplicates while building lattice)
                 for dir in dir_arr {
-                    // TODO: this u32 and i32 conversions are messy
-                    let curr_node_pos = UVec3 { x, y, z };
-                    let to_node_pos = curr_node_pos.as_ivec3() + dir;
+                    // Get the two and from position of the nodes
+                    let curr_node_pos = IVec3 { x, y, z };
+                    let to_node_pos = curr_node_pos + dir;
 
-                    if to_node_pos.x < 0
-                        || to_node_pos.x >= nodes_dim as i32
-                        || to_node_pos.y < 0
-                        || to_node_pos.y >= nodes_dim as i32
-                        || to_node_pos.z < 0
-                        || to_node_pos.z >= nodes_dim as i32
-                    {
+                    // Check if we are out of bounds
+                    if out_of_bounds(to_node_pos, nodes_dim){
                         continue;
                     }
 
                     // Get the entities for both nodes
                     let to_node = node_data.get(to_node_pos.as_uvec3());
-                    let from_node = node_data.get(curr_node_pos);
+                    let from_node = node_data.get(curr_node_pos.as_uvec3());
 
                     // Determine the length of the spring, diagonal springs will not be the same starting length
                     // as horizontal and vertical ones
@@ -327,28 +358,16 @@ pub fn generate_lattice(
 
                     // Generate a color that creates a gradient across the cube
                     let position = curr_node_pos.as_vec3() / nodes_dim as f32;
-                    // Generate a random color
-                    // let color: Color = Color::srgb(rng.sample(dist), rng.sample(dist), rng.sample(dist));
+                    let color = Color::srgb(position.x, position.y, position.z);
 
-                    let emissive =  Color::srgb(position.x*0.5, position.y*0.5, position.z*0.5);
-                    let color: Color = Color::srgb(position.x, position.y, position.z);
-
-                    // Create a new Link / Spring
+                    // Create a new Link / Spring and spawn
                     let link = Link::new(lattice_config::SPRING_CONST, length, to_node, from_node);
                     commands.spawn((
                         PbrBundle {
                             mesh: meshes.add(link.create_mesh()),
-                            material: materials.add(StandardMaterial{
-                                base_color: color,
-                                // emissive: emissive.into(),
-                                ..default()
-                            }),
-                            transform: Transform::from_translation(
-                                // This is left as is instead of feeding length because
-                                // node_data stores it is a 1x1x1 cube internally so it can use indexes directly
-                                // to access the node data.
-                                curr_node_pos.as_vec3() * lattice_config::STARTING_LINK_LEN,
-                            ),
+                            material: materials.add(color),
+                            // transform will be corrected once springs positions update
+                            transform: Transform::from_translation(Vec3::ZERO), 
                             visibility: lattice_config::LINK_VISIBILITY,
                             ..default()
                         },
@@ -368,14 +387,12 @@ pub fn generate_lattice(
 
 
 
+
 pub fn print_kinetic_energy(
     sim_data: Res<SimulationData>,
 ) {
     println!("{}", sim_data.kinetic_energy);
 }
-
-
-
 
 
 
@@ -402,24 +419,30 @@ pub fn update_nodes_state(
         let acc = node.sum_forces / node.mass;
         node.vel = node.vel + acc * delta_t;
         node.pos = node.pos + node.vel * delta_t;
-        transform.translation = node.pos;
 
         // zero out sum forces
         node.sum_forces = Vec3::ZERO;
+
+        // calculate the total kinetic energy
         let velocity_magnitude = node.vel.length();
-        total_kinetic_energy += 0.5*node.mass * velocity_magnitude * velocity_magnitude;
+        total_kinetic_energy += 0.5 * node.mass * velocity_magnitude * velocity_magnitude;
+
+        // Update the nodes mesh transform
+        transform.translation = node.pos;
     }
 
     sim_data.kinetic_energy = total_kinetic_energy;
 }
 
 /// Update spring phyiscs
-pub fn update_link_physics(time: Res<Time>, mut links: Query<& mut Link>, mut nodes: Query<(&mut Node, &mut Transform)>) {
+pub fn update_link_physics(
+    time: Res<Time>, 
+    mut links: Query<(& mut Link, &Handle<StandardMaterial>)>, 
+    mut nodes: Query<(&mut Node, &mut Transform)>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+) {
     let delta_t = time.delta_seconds();
-    for mut link in links.iter_mut() {
-
-        //TODO: clean up where internal position vs transform is used.
-        // TODO: use and_then to return the pos if its okay and then use that for the math below
+    for (mut link, mut material_handle) in links.iter_mut() {
 
         let node_from = match nodes.get(link.from) {
             Ok(node) => node,
@@ -435,19 +458,32 @@ pub fn update_link_physics(time: Res<Time>, mut links: Query<& mut Link>, mut no
         let force_dir = (node_to_pos - node_from_pos).normalize();
         let length = (node_to_pos - node_from_pos).length();
         let spring_displacement = length - link.orig_length;
-        const DAMPING: f32 = 0.7; // 30 at damping and vel at 20 is pretty cool
+        const DAMPING: f32 = 30.0; // 30 at damping and vel at 20 is pretty cool and div spring displament by 5
         // positive -> spring is expanded
         // negative -> spring is contracted
 
         // velocity of the spring is change of spring displacement over time. v = delta x / delta t
-        let damping_force = DAMPING * (spring_displacement - link.delta_spring_length_pre)/delta_t;
-        let total_force = -1. * link.spring_const * spring_displacement - damping_force;
+        let velocity = (spring_displacement - link.delta_spring_length_pre)/delta_t;
+        let damping_force = -DAMPING * velocity;
+        // let damping_force =0.0;
+        let total_force = -1. * link.spring_const * spring_displacement + damping_force;
         // let force = -1. * link.spring_const * spring_displacement - (DAMPING * (node_to.0.vel - node_from.0.vel)); // THIS IS WRONG, works in sim but wrong physics wise
         // link.delta_spring_length_pre = spring_displacement/5.0; // results in more appealing simulations
-        link.delta_spring_length_pre = spring_displacement;
+        link.delta_spring_length_pre = spring_displacement/5.0;
         let from_force =  -0.5* total_force * force_dir;
         let to_force = -from_force;
 
+        // https://github.com/bevyengine/bevy/discussions/8487
+        let material = materials.get_mut(material_handle).unwrap();
+        // Doing it by force the spring exerts
+        // if let Some(force_color) = from_force.try_normalize() {
+        //     let scaled_vec = force_color * 0.5 + Vec3::splat(0.5);
+        //     material.base_color = Color::srgb(scaled_vec.x, scaled_vec.y, scaled_vec.z);
+        // }
+        // Doing it by the velocity. Apply the gain to get the colors to show more when velocity is low
+        // let normalized_vel = f32::abs(velocity) / 255.0  * 40.0;
+        // material.base_color = Color::srgb(normalized_vel, 0.0,0.0);
+        
 
         let mut node_from_mut = match nodes.get_mut(link.from) {
             Ok(node) => node,
@@ -469,9 +505,9 @@ pub fn update_link_physics(time: Res<Time>, mut links: Query<& mut Link>, mut no
 /// Update the springs
 pub fn update_spring(
     mut links: Query<(&Link, &mut Transform), Without<Node>>,
-    nodes: Query<&mut Transform, With<Node>>,
+    nodes: Query<&Node>,
 ) {
-    for (link, mut transform) in &mut links {
+    for (link, mut transform) in links.iter_mut() {
         // expect and unwrap not encouraged to use, see
         // https://doc.rust-lang.org/book/ch09-02-recoverable-errors-with-result.html
         let node_to = nodes
@@ -482,8 +518,10 @@ pub fn update_spring(
             .expect("The node should exist as no nodes are ever despawned.");
 
         // update position and length of the spring
-        let dir = node_to.translation - node_from.translation;
-        transform.translation = dir / 2.  + node_from.translation;
+        // USE POS, NOT THE TRANSFORM OF THE SPRING
+        // this is because the transform only updates every frame where as pos updates every fixedtimestep
+        let dir = node_to.pos - node_from.pos;
+        transform.translation = dir / 2.  + node_from.pos;
         transform.scale.z = dir.length() / link.orig_length;
         
         // rotate the spring so it aligns with the direction vector between the two nodes (node_to - node_from)
@@ -495,15 +533,15 @@ pub fn update_spring(
         // I want Z to point to the vector from node_from to node_to or the dir vector
         // The secondary axis - just using Y, I assume X would work, I want to point to a vector orthogonal to the dir vector.
         // I get this vector by crossing the direction vector node_from vector.
-        // *transform = transform.aligned_by(Vec3::Z, dir, Vec3::Y, dir.cross(node_from.translation))
-        // okay the cross thing is nice but i think that was causing a lot fo them to spin which makes sense
+        *transform = transform.aligned_by(Vec3::Z, dir, Vec3::Y, dir.cross(node_from.pos));
+        // okay the cross thing is nice but i think that was causing a lot of them to spin which makes sense
         // because dir cross node_from trans could point in any outward direction really.
-        *transform = transform.aligned_by(Vec3::Z, dir, Vec3::Y, Vec3::splat(100.0)); 
+        // *transform = transform.aligned_by(Vec3::Z, dir, Vec3::Y, Vec3::splat(100.0));  //this seems to cause the sticks to glitch occasionally.
         // Update, because i dont care about secondary axis, applied what I learned from above to make looking_at work.
         // same principals apply, I want to look at the node named node_to and I want a vector orthogonal ot the dir vector.
-        // *transform = transform.looking_at(node_to.translation,  dir.cross(node_from.translation))
+        // *transform = transform.looking_at(node_to.pos,  dir.cross(node_from.pos)) // this also has the spinning problem
 
         // note that the following doesnt work but produces awesome results
-        // *transform = transform.looking_to(node_to.translation,  dir.cross(node_from.translation))
+        // *transform = transform.looking_to(node_to.pos,  dir.cross(node_from.pos))
     }
 }
