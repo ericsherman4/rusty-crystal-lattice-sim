@@ -43,11 +43,6 @@ fn main() {
         // ------------------------------------------------------------------------------------------------------
         // Draw the initial scene and set background color
         .insert_resource(ClearColor(Srgba::hex("3b4a56").unwrap().into()))
-        // .insert_resource(AmbientLight {
-        //     brightness: 100.0,
-        //     ..default()
-        // })
-        // .insert_resource(ClearColor(Color::Srgba(Srgba::WHITE)))
         .add_systems(Startup, scene::setup)
         // ------------------------------------------------------------------------------------------------------
         // Draw the coordinate grid
@@ -71,8 +66,7 @@ fn main() {
             .chain().run_if(once_after_delay(Duration::from_secs(START_DELAY)))
         )
         // ------------------------------------------------------------------------------------------------------
-        // This lets you run an update at some interval. Not sure how to make multiple of them
-        // I think these just apply to FixedUpdate schedule.
+        // This lets you run an update at some interval. There is only one fixed update schedule
         // Example: https://github.com/bevyengine/bevy/blob/latest/examples/time/time.rs
         // TODO: change spring module name to lattice
         .insert_resource(Time::<Fixed>::from_duration(Duration::from_millis(5)))

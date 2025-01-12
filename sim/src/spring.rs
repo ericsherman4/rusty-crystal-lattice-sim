@@ -1,8 +1,7 @@
 use crate::config::{colors_config, lattice_config};
 use crate::resources::RandomSource;
 use bevy::{color, prelude::*};
-use rand::distributions::Uniform;
-use rand::Rng;
+use rand::{distributions::Uniform, Rng};
 
 //////////////////////////////////////////////////
 /// GENERAL SIMULATION STUFF
@@ -88,8 +87,6 @@ impl Default for Node {
 /// LINK
 //////////////////////////////////////////////////
 
-
-
 /// Links are massless.
 /// Using link / spring interchangably throughout the code
 #[derive(Component)]
@@ -134,19 +131,21 @@ impl Link {
 /// LATTICE
 //////////////////////////////////////////////////
 
+
+/// Data structure for holding all of the nodes for lattice generation. 
 struct LatticeNodes {
+
+    /// Dim is the number of "1x1x1 cubes" on one side of the cube lattice.
     dim: u32,
+
+    /// A 1D array of all the node elements
     data: Vec<Entity>,
 }
 
 impl LatticeNodes {
-    // this has fucked me up a lot.
-    // if you pass in self, then when u call this function, ownership will be transferred?
-    // so u need the arg to be reference or mutable reference
-
     /// Creates a data struct that holds all of the nodes so that during lattice
     /// generation, links can query them.
-    /// Dim is the number of "1x1x1 cubes" on one side of the cube lattice.
+    
     fn new(dim: u32) -> Self {
         let total_nodes = calc_num_lattice_nodes(dim) as usize;
         Self {
@@ -275,7 +274,7 @@ fn create_all_nodes(
     );
 }
 
-fn out_of_bounds(vec: IVec3, bounds: i32) -> bool {
+fn link_out_of_bounds(vec: IVec3, bounds: i32) -> bool {
     return vec.x < 0 
         || vec.x >= bounds 
         || vec.y < 0                 
@@ -344,7 +343,7 @@ pub fn generate_lattice(
                     let to_node_pos = curr_node_pos + dir;
 
                     // Check if we are out of bounds
-                    if out_of_bounds(to_node_pos, nodes_dim){
+                    if link_out_of_bounds(to_node_pos, nodes_dim){
                         continue;
                     }
 
