@@ -38,14 +38,14 @@ pub struct LatticeGen {
 fn get_static_node_indices() -> Vec<(u32, u32, u32)> {
     let corner_index = lattice_config::DIM;
     vec![
-        (0, 0, 0),
+        // (0, 0, 0),
         (corner_index, corner_index, corner_index),
         (corner_index, 0, 0),
-        (0, corner_index, 0),
-        (0, 0, corner_index),
+        // (0, corner_index, 0),
+        // (0, 0, corner_index),
         (corner_index, corner_index, 0),
         (corner_index, 0, corner_index),
-        (0, corner_index, corner_index),
+        // (0, corner_index, corner_index),
     ]
 }
 
@@ -98,13 +98,13 @@ pub fn create_all_nodes(
                 let bundle = PbrBundle {
                     mesh: meshes.add(node_mesh.clone()),
                     material: materials.add(colors_config::NODE_COLOR),
-                    transform: Transform::from_translation(node.pos),
+                    transform: Transform::from_translation(starting_pos),
                     ..default()
                 };
 
                 // Check if it's a corner node and anchor it by spawning it with the static component.
                 if corners.contains(&(x, y, z)) {
-                    lattice_gen.add(commands.spawn((bundle, node, Static)).id());
+                    lattice_gen.add(commands.spawn((bundle, node, Static::new(starting_pos))).id());
                 } else {
                     lattice_gen.add(commands.spawn((bundle, node)).id());
                 }

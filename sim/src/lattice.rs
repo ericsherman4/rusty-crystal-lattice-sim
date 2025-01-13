@@ -145,6 +145,7 @@ pub fn print_kinetic_energy(sim_data: Res<SimulationData>) {
 pub fn update_nodes_state(
     time: Res<Time>,
     mut nodes: Query<(&mut Node, &mut Transform), Without<Static>>,
+    mut static_nodes: Query<(&mut Node, &mut Transform, &Static)>,
     mut sim_data: ResMut<SimulationData>,
 ) {
     let delta_t = time.delta_seconds();
@@ -170,6 +171,15 @@ pub fn update_nodes_state(
     }
 
     sim_data.kinetic_energy = total_kinetic_energy;
+
+    // Move the static nodes around
+    for (mut node, mut transform, static_component) in static_nodes.iter_mut() {
+        let wave_pos = 2.0 * f32::sin(time.elapsed_seconds() / 2.0);
+        node.pos.y = static_component.orig_pos.y +  wave_pos;
+        transform.translation.y = static_component.orig_pos.y +  wave_pos;
+    }
+
+
 }
 
 /// Update spring physics and sum up forces on each node
@@ -180,7 +190,7 @@ pub fn update_link_physics(
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
     let delta_t = time.delta_seconds();
-    const DAMPING: f32 = 5.0; // 30 at damping and vel at 20 is pretty cool and div spring displament by 5
+    const DAMPING: f32 = 20.0; // 30 at damping and vel at 20 is pretty cool and div spring displament by 5
 
     for (mut link, mut material_handle) in links.iter_mut() {
 
@@ -212,8 +222,8 @@ pub fn update_link_physics(
         //     material.base_color = Color::srgb(scaled_vec.x, scaled_vec.y, scaled_vec.z);
         // }
         // Doing it by the velocity. Apply the gain to get the colors to show more when velocity is low
-        // let normalized_vel = f32::abs(velocity) / 255.0  * 40.0;
-        // material.base_color = Color::srgb(normalized_vel, 0.0,0.0);
+        let normalized_vel = f32::abs(velocity) / 255.0  * 40.0;
+        material.base_color = Color::srgb(normalized_vel, 0.0,0.0);
 
         // this force is applied in the axis colinear from node 1 to node 2
         nodes.get_mut(link.from).unwrap().0.sum_forces += from_force;

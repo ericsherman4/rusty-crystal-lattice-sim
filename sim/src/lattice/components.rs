@@ -7,7 +7,10 @@ use bevy::prelude::*;
 
 /// If a node is spawned with a static component, it should not move
 #[derive(Component)]
-pub struct Static;
+pub struct Static {
+    /// the original spawn position of the node  
+    pub orig_pos: Vec3,
+}
 
 /// Nodes!
 #[derive(Component)]
@@ -40,6 +43,14 @@ impl Default for Node {
             vel: Vec3::ZERO,
             sum_forces: Vec3::ZERO,
             mass: lattice_config::NODE_MASS,
+        }
+    }
+}
+
+impl Static {
+    pub fn new(orig_pos: Vec3) -> Self {
+        Self {
+            orig_pos
         }
     }
 }
