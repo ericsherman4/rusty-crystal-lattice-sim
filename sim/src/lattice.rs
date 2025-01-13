@@ -51,25 +51,39 @@ impl Plugin for LatticePlugin {
 
         app.add_systems(Update, rotate_around_center);
 
-        app.add_systems(
-            Update,
-            // (create_all_nodes, generate_lattice)
-            (create_all_nodes, generate_lattice_animated)
-                .chain()
-                .run_if(once_after_delay(LATTICE_START_DELAY)),
-        );
+        if false {
+            app.add_systems(
+                Update,
+                (create_all_nodes, generate_lattice)
+                    .chain()
+                    .run_if(once_after_delay(LATTICE_START_DELAY)),
+            );
+        }
+        else {
+            app.add_systems(
+                Update, create_all_nodes.run_if(once_after_delay(LATTICE_START_DELAY)),
+            );
+            app.add_systems(Update, generate_lattice_animated
+                .after(create_all_nodes)
+                // .run_if(on_timer(Duration::from_millis(1)))
+                .run_if(repeating_after_delay(LATTICE_START_DELAY)));
+        }
+
+
         app.add_systems(
             FixedUpdate,
-            (update_nodes_state, update_link_physics, update_spring)
-                .chain()
-                .run_if(repeating_after_delay(LATTICE_START_DELAY)),
+            (
+                // update_nodes_state, 
+                // update_link_physics, 
+                update_spring
+            ).chain().run_if(repeating_after_delay(LATTICE_START_DELAY)),
         );
 
         app.add_systems(Update, update_center_of_mass);
-        app.add_systems(
-            Update,
-            print_kinetic_energy.run_if(on_timer(Duration::from_secs_f32(0.5))),
-        );
+        // app.add_systems(
+        //     Update,
+        //     print_kinetic_energy.run_if(on_timer(Duration::from_secs_f32(0.5))),
+        // );
     }
 }
 

@@ -35,12 +35,14 @@ pub struct LatticeGen {
     pub data: Vec<Entity>,
 }
 
+#[derive(Debug)]
 enum LatticeGenState {
     InBoundAnimMaterial, 
     OutofBoundAnimMaterial,
     CheckingDirections,
     NewPosition, 
     FinalCheck,
+    Done,
 }
 
 #[derive(Resource)]
@@ -166,75 +168,100 @@ pub fn generate_lattice_animated(
 
     let nodes_dim = lattice_gen.nodes_dim as i32; 
 
+    // println!("Processing state {:?}", anim.state);
     match anim.state { 
         LatticeGenState::CheckingDirections => {
-            if anim.dir_idx > anim.dir_arr.len() {
+            if anim.dir_idx == anim.dir_arr.len()  {
                 anim.state = LatticeGenState::NewPosition;
                 anim.reset_direction();
+                return;
+            }
+
+            
+            let curr_node_pos = IVec3 { x: anim.x, y: anim.y, z: anim.z };
+            let to_node_pos = curr_node_pos + anim.dir_arr[anim.dir_idx];
+
+            // Check if we are out of bounds
+            if link_out_of_bounds(to_node_pos, nodes_dim) {
+                // anim.state =  LatticeGenState::OutofBoundAnimMaterial;
+                // temp code
+                anim.dir_idx += 1;
+                return;
+
             }
             else{
-                let curr_node_pos = IVec3 { x: anim.x, y: anim.y, z: anim.z };
-                let to_node_pos = curr_node_pos + anim.dir_arr[anim.dir_idx];
-
-                // Difference now is that no matter what we generate the link and then maybe despawn it
-                let to_node = lattice_gen.get(to_node_pos.as_uvec3());
-                let from_node = lattice_gen.get(curr_node_pos.as_uvec3());
-
-                // Determine the length of the spring, diagonal springs will not be the same starting length
-                // as horizontal and vertical ones
-                let length = (to_node_pos.as_vec3() - curr_node_pos.as_vec3()).length();
-
-                 // Create a new Link / Spring and spawn
-                 let link = Link::new(lattice_config::SPRING_CONST, length, to_node, from_node);
-                 commands.spawn((
-                     PbrBundle {
-                         mesh: meshes.add(link.create_mesh()),
-                         material: materials.add(Color::WHITE),
-                         // transform will be corrected once springs positions update
-                         transform: Transform::from_translation(Vec3::ZERO),
-                         visibility: lattice_config::LINK_VISIBILITY,
-                         ..default()
-                     },
-                     link,
-                 ));
-
-
-                // Check if we are out of bounds
-                // Uncommenting for now cause we would get stuck
-                // if link_out_of_bounds(to_node_pos, nodes_dim) {
-                //     anim.state =  LatticeGenState::OutofBoundAnimMaterial;
-                // }
-                // else{
-                //     anim.state = LatticeGenState::InBoundAnimMaterial;
-                // }
-
-                anim.dir_idx += 1;
+                // anim.state = LatticeGenState::InBoundAnimMaterial;
             }
+
+            // Difference now is that no matter what we generate the link and then maybe despawn it
+            let to_node = lattice_gen.get(to_node_pos.as_uvec3());
+            let from_node = lattice_gen.get(curr_node_pos.as_uvec3());
+
+            // Determine the length of the spring, diagonal springs will not be the same starting length
+            // as horizontal and vertical ones
+            let length = (to_node_pos.as_vec3() - curr_node_pos.as_vec3()).length();
+
+            // Generate a color that creates a gradient across the cube
+            let position = curr_node_pos.as_vec3() / nodes_dim as f32;
+            let color = Color::srgb(position.x, position.y, position.z);
+
+            // Create a new Link / Spring and spawn
+            let link = Link::new(lattice_config::SPRING_CONST, length, to_node, from_node);
+            anim.curr_link = Some(commands.spawn((
+                PbrBundle {
+                    mesh: meshes.add(link.create_mesh()),
+                    material: materials.add(color),
+                    // transform will be corrected once springs positions update
+                    transform: Transform::from_translation(Vec3::ZERO),
+                    visibility: lattice_config::LINK_VISIBILITY,
+                    ..default()
+                },
+                link,
+            )).id());
+            anim.links_counter +=1;
+
+
+            
+
+            anim.dir_idx += 1;
         },
         LatticeGenState::NewPosition => {
             let final_pos = nodes_dim - 1;
+            
+            // Go back to new position unless we reached the final position
+            anim.state = LatticeGenState::CheckingDirections;
+
             if anim.x == final_pos && anim.y == final_pos && anim.z == final_pos {
-                anim.state = LatticeGenState::CheckingDirections;
+                anim.state = LatticeGenState::FinalCheck;
+                return;
             }
 
-            if anim.x < nodes_dim {
+            if anim.x < final_pos {
                 anim.x += 1;
+                println!("Position {},{},{}", anim.x, anim.y, anim.z);
                 return;
             }
             anim.x = 0;
             
-            if anim.y < nodes_dim {
+            if anim.y < final_pos {
                 anim.y += 1;
+                println!("Position {},{},{}", anim.x, anim.y, anim.z);
                 return;
             }
             
             anim.y = 0;
-            if anim.z < nodes_dim {
+            if anim.z < final_pos {
                 anim.z += 1;
+                println!("Position {},{},{}", anim.x, anim.y, anim.z);
                 return;
             }
         }
-
+        LatticeGenState::FinalCheck => {
+            let num_links = calc_num_links(lattice_config::DIM);
+            println!("number of springs generated is {} and expected was {num_links}",anim.links_counter);
+            debug_assert_eq!(anim.links_counter, num_links);
+            anim.state = LatticeGenState::Done;
+        }
         _ => {}
     }
 }
@@ -334,16 +361,18 @@ impl LatticeGen {
 
     /// Get the data from the array given xyz index in the lattice.
     pub fn get_data_idx(&self, x: u32, y: u32, z: u32) -> usize {
-        (z * self.nodes_dim * self.nodes_dim + y * self.nodes_dim + x) as usize
+        ((z * self.nodes_dim * self.nodes_dim) + (y * self.nodes_dim) + (x)) as usize
     }
 
     /// Get the entity given the xyz index in the lattice.
     pub fn get(&self, UVec3 { x, y, z }: UVec3) -> Entity {
-        debug_assert!(x <= (self.nodes_dim + 1));
-        debug_assert!(y <= (self.nodes_dim + 1));
-        debug_assert!(z <= (self.nodes_dim + 1));
+        // println!("Getting Node {},{},{}", x,y,z);
+        debug_assert!(x < self.nodes_dim);
+        debug_assert!(y < self.nodes_dim);
+        debug_assert!(z < self.nodes_dim);
         // println!("accessing {} {} {}", x,y,z);
         let idx = self.get_data_idx(x, y, z);
+        debug_assert!(idx < self.data.len());
         self.data[idx]
     }
 
