@@ -176,14 +176,8 @@ pub fn update_link_physics(
     let delta_t = time.delta_seconds();
     for (mut link, mut material_handle) in links.iter_mut() {
 
-        let node_from = match nodes.get(link.from) {
-            Ok(node) => node,
-            Err(error) => panic!("Unable to get the node {error:?}"),
-        };
-        let node_to = match nodes.get(link.to) {
-            Ok(node) => node,
-            Err(error) => panic!("Unable to get the node {error:?}"),
-        };
+        let node_from = nodes.get(link.from).unwrap();
+        let node_to = nodes.get(link.to).unwrap();
 
         let node_to_pos = node_to.0.pos;
         let node_from_pos = node_from.0.pos;
@@ -191,8 +185,6 @@ pub fn update_link_physics(
         let length = (node_to_pos - node_from_pos).length();
         let spring_displacement = length - link.orig_length;
         const DAMPING: f32 = 30.0; // 30 at damping and vel at 20 is pretty cool and div spring displament by 5
-        // positive -> spring is expanded
-        // negative -> spring is contracted
 
         // velocity of the spring is change of spring displacement over time. v = delta x / delta t
         let velocity = (spring_displacement - link.delta_spring_length_pre)/delta_t;
@@ -217,20 +209,9 @@ pub fn update_link_physics(
         // material.base_color = Color::srgb(normalized_vel, 0.0,0.0);
         
 
-        let mut node_from_mut = match nodes.get_mut(link.from) {
-            Ok(node) => node,
-            Err(error) => panic!("Unable to get the node {error:?}"),
-        };
-
         // this force is applied in the axis colinear from node 1 to node 2
-        node_from_mut.0.sum_forces += from_force; //- to_force;
-
-        let mut node_to_mut = match nodes.get_mut(link.to) {
-            Ok(node) => node,
-            Err(error) => panic!("Unable to get the node {error:?}"),
-        };
-
-        node_to_mut.0.sum_forces += to_force; //- from_force;
+        nodes.get_mut(link.from).unwrap().0.sum_forces += from_force;
+        nodes.get_mut(link.to).unwrap().0.sum_forces += to_force;
     }
 }
 

@@ -77,7 +77,7 @@ fn link_out_of_bounds(vec: IVec3, bounds: i32) -> bool {
     let dist: Uniform<f32> =
         Uniform::new_inclusive(lattice_config::START_VEL_MIN, lattice_config::START_VEL_MAX);
 
-    // Use function to specify which ones should be static
+    // Get indexes for which nodes should be static
     let corners = get_static_node_indices();
 
     // Define some variables for generating all the nodes
