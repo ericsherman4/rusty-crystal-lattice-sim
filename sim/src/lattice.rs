@@ -180,7 +180,10 @@ pub fn update_link_physics(
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
     let delta_t = time.delta_seconds();
+    const DAMPING: f32 = 5.0; // 30 at damping and vel at 20 is pretty cool and div spring displament by 5
+
     for (mut link, mut material_handle) in links.iter_mut() {
+
         let node_from = nodes.get(link.from).unwrap();
         let node_to = nodes.get(link.to).unwrap();
 
@@ -189,7 +192,6 @@ pub fn update_link_physics(
         let force_dir = (node_to_pos - node_from_pos).normalize();
         let length = (node_to_pos - node_from_pos).length();
         let spring_displacement = length - link.orig_length;
-        const DAMPING: f32 = 30.0; // 30 at damping and vel at 20 is pretty cool and div spring displament by 5
 
         // velocity of the spring is change of spring displacement over time. v = delta x / delta t
         let velocity = (spring_displacement - link.delta_spring_length_pre) / delta_t;
