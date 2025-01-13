@@ -1,17 +1,15 @@
-
-use bevy::prelude::*;
 use crate::config::{colors_config, lattice_config};
+use bevy::prelude::*;
 
 //-------------------------------------------------------
 // STRUCTS
 //-------------------------------------------------------
 
-
 /// If a node is spawned with a static component, it should not move
 #[derive(Component)]
 pub struct Static;
 
-/// Nodes! 
+/// Nodes!
 #[derive(Component)]
 pub struct Node {
     pub pos: Vec3,        // meters
@@ -25,7 +23,7 @@ pub struct Node {
 #[derive(Component)]
 pub struct Link {
     pub spring_const: f32,
-    pub delta_spring_length_pre: f32, 
+    pub delta_spring_length_pre: f32,
     pub orig_length: f32,
     pub to: Entity,
     pub from: Entity,
@@ -34,7 +32,6 @@ pub struct Link {
 //-------------------------------------------------------
 // IMPLEMENTATIONS
 //-------------------------------------------------------
-
 
 impl Default for Node {
     fn default() -> Self {
@@ -46,7 +43,6 @@ impl Default for Node {
         }
     }
 }
-
 
 impl Link {
     /// Create a new link.

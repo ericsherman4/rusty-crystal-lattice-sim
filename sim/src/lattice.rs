@@ -1,14 +1,16 @@
-use std::time::Duration;
 use bevy::{
-    color, gizmos::config, prelude::*, time::common_conditions::{on_timer, once_after_delay, repeating_after_delay}
+    color,
+    gizmos::config,
+    prelude::*,
+    time::common_conditions::{on_timer, once_after_delay, repeating_after_delay},
 };
+use std::time::Duration;
 
 mod components;
 mod lattice_gen;
-use components::{Node, Link, Static};
-use lattice_gen::{LatticeGen, RandomSourcePlugin, create_all_nodes, generate_lattice};
 use crate::config::{colors_config, lattice_config};
-
+use components::{Link, Node, Static};
+use lattice_gen::{create_all_nodes, generate_lattice, LatticeGen, RandomSourcePlugin};
 
 //-------------------------------------------------------
 // STRUCTS
@@ -35,14 +37,12 @@ impl Default for SimulationData {
     }
 }
 
-
 impl Plugin for LatticePlugin {
     fn build(&self, app: &mut App) {
-        
-        const LATTICE_START_DELAY : Duration = Duration::from_millis(1_000);
-        
+        const LATTICE_START_DELAY: Duration = Duration::from_millis(1_000);
+
         // Inserts the rng to generate the lattice
-        app.add_plugins(RandomSourcePlugin); 
+        app.add_plugins(RandomSourcePlugin);
 
         app.insert_resource(Time::<Fixed>::from_duration(Duration::from_millis(10)));
         app.insert_resource(SimulationData::default());
@@ -51,45 +51,55 @@ impl Plugin for LatticePlugin {
         app.add_systems(Update, rotate_around_center);
 
         app.add_systems(
-            Update, (
-                create_all_nodes,
-                generate_lattice
-            ).chain().run_if(once_after_delay(LATTICE_START_DELAY)));
+            Update,
+            (create_all_nodes, generate_lattice)
+                .chain()
+                .run_if(once_after_delay(LATTICE_START_DELAY)),
+        );
         app.add_systems(
             FixedUpdate,
-            (
-                update_nodes_state, 
-                update_link_physics,
-                update_spring
-            ).chain().run_if(repeating_after_delay(LATTICE_START_DELAY)),
+            (update_nodes_state, update_link_physics, update_spring)
+                .chain()
+                .run_if(repeating_after_delay(LATTICE_START_DELAY)),
         );
 
         app.add_systems(Update, update_center_of_mass);
-        app.add_systems(Update, print_kinetic_energy.run_if(on_timer(Duration::from_secs_f32(0.5))));
-        
+        app.add_systems(
+            Update,
+            print_kinetic_energy.run_if(on_timer(Duration::from_secs_f32(0.5))),
+        );
     }
 }
 
-
-/// Rotate the camera around the center of the cube. 
-/// Must unlock the unreal engine camera for it to work. 
+/// Rotate the camera around the center of the cube.
+/// Must unlock the unreal engine camera for it to work.
 fn rotate_around_center(
     data: Res<SimulationData>,
     mut camera: Query<&mut Transform, With<Camera>>,
     time: Res<Time>,
     keyboard: Res<ButtonInput<KeyCode>>,
-){
+) {
     let mut camera = camera.single_mut();
-    
+
     let secondary_axis_rot_rate = 0.0;
     let primary_axis_rot_rate = 0.3 * time.delta_seconds();
 
     if keyboard.pressed(KeyCode::ArrowRight) {
-        let rot = Quat::from_euler(EulerRot::YXZ, primary_axis_rot_rate, secondary_axis_rot_rate, secondary_axis_rot_rate);
+        let rot = Quat::from_euler(
+            EulerRot::YXZ,
+            primary_axis_rot_rate,
+            secondary_axis_rot_rate,
+            secondary_axis_rot_rate,
+        );
         camera.rotate_around(data.center_of_mass.translation, rot);
     }
     if keyboard.pressed(KeyCode::ArrowLeft) {
-        let rot = Quat::from_euler(EulerRot::YXZ, -primary_axis_rot_rate, -secondary_axis_rot_rate, -secondary_axis_rot_rate);
+        let rot = Quat::from_euler(
+            EulerRot::YXZ,
+            -primary_axis_rot_rate,
+            -secondary_axis_rot_rate,
+            -secondary_axis_rot_rate,
+        );
         camera.rotate_around(data.center_of_mass.translation, rot);
     }
     if keyboard.pressed(KeyCode::ArrowUp) {
@@ -102,17 +112,13 @@ fn rotate_around_center(
     }
 }
 
-
 //-------------------------------------------------------
 // SPRING SYSTEMS
 //-------------------------------------------------------
 
 /// Update the center of mass of the cube in simulation data
 /// Used for camera rotations
-pub fn update_center_of_mass(
-    mut data: ResMut<SimulationData>,
-    nodes: Query<&Node>,
-) {
+pub fn update_center_of_mass(mut data: ResMut<SimulationData>, nodes: Query<&Node>) {
     let mut accum = Vec3::ZERO;
     let mut count = 0;
 
@@ -122,22 +128,22 @@ pub fn update_center_of_mass(
     }
 
     // Guard against not yet having any nodes spawned
-    if count == 0 { return; }
-    
+    if count == 0 {
+        return;
+    }
+
     data.center_of_mass.translation = accum / count as f32;
     // println!("initial COM is {}", data.center_of_mass.translation);
 }
 
 /// Print the kinetic energy of the cube
-pub fn print_kinetic_energy(
-    sim_data: Res<SimulationData>,
-) {
+pub fn print_kinetic_energy(sim_data: Res<SimulationData>) {
     println!("{}", sim_data.kinetic_energy);
 }
 
 /// Update the state of the nodes and their positions using the calculated force
 pub fn update_nodes_state(
-    time: Res<Time>, 
+    time: Res<Time>,
     mut nodes: Query<(&mut Node, &mut Transform), Without<Static>>,
     mut sim_data: ResMut<SimulationData>,
 ) {
@@ -168,14 +174,13 @@ pub fn update_nodes_state(
 
 /// Update spring physics and sum up forces on each node
 pub fn update_link_physics(
-    time: Res<Time>, 
-    mut links: Query<(& mut Link, &Handle<StandardMaterial>)>, 
+    time: Res<Time>,
+    mut links: Query<(&mut Link, &Handle<StandardMaterial>)>,
     mut nodes: Query<(&mut Node, &mut Transform)>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
     let delta_t = time.delta_seconds();
     for (mut link, mut material_handle) in links.iter_mut() {
-
         let node_from = nodes.get(link.from).unwrap();
         let node_to = nodes.get(link.to).unwrap();
 
@@ -187,14 +192,14 @@ pub fn update_link_physics(
         const DAMPING: f32 = 30.0; // 30 at damping and vel at 20 is pretty cool and div spring displament by 5
 
         // velocity of the spring is change of spring displacement over time. v = delta x / delta t
-        let velocity = (spring_displacement - link.delta_spring_length_pre)/delta_t;
+        let velocity = (spring_displacement - link.delta_spring_length_pre) / delta_t;
         let damping_force = -DAMPING * velocity;
         // let damping_force =0.0;
         let total_force = -1. * link.spring_const * spring_displacement + damping_force;
         // let force = -1. * link.spring_const * spring_displacement - (DAMPING * (node_to.0.vel - node_from.0.vel)); // THIS IS WRONG, works in sim but wrong physics wise
         // link.delta_spring_length_pre = spring_displacement/5.0; // results in more appealing simulations
-        link.delta_spring_length_pre = spring_displacement/5.0;
-        let from_force =  -0.5* total_force * force_dir;
+        link.delta_spring_length_pre = spring_displacement / 5.0;
+        let from_force = -0.5 * total_force * force_dir;
         let to_force = -from_force;
 
         // https://github.com/bevyengine/bevy/discussions/8487
@@ -207,7 +212,6 @@ pub fn update_link_physics(
         // Doing it by the velocity. Apply the gain to get the colors to show more when velocity is low
         // let normalized_vel = f32::abs(velocity) / 255.0  * 40.0;
         // material.base_color = Color::srgb(normalized_vel, 0.0,0.0);
-        
 
         // this force is applied in the axis colinear from node 1 to node 2
         nodes.get_mut(link.from).unwrap().0.sum_forces += from_force;
@@ -234,9 +238,9 @@ pub fn update_spring(
         // USE POS, NOT THE TRANSFORM OF THE SPRING
         // this is because the transform only updates every frame where as pos updates every fixedtimestep
         let dir = node_to.pos - node_from.pos;
-        transform.translation = dir / 2.  + node_from.pos;
+        transform.translation = dir / 2. + node_from.pos;
         transform.scale.z = dir.length() / link.orig_length;
-        
+
         // rotate the spring so it aligns with the direction vector between the two nodes (node_to - node_from)
         // best attempt at explaining
         // This fixes my dir3::new_unchecked is not normalized error

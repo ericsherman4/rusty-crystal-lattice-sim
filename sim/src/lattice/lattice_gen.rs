@@ -1,6 +1,6 @@
 use bevy::prelude::*;
-use rand_chacha::ChaCha8Rng;
 use rand::{distributions::Uniform, Rng, SeedableRng};
+use rand_chacha::ChaCha8Rng;
 
 use crate::config::{colors_config, lattice_config};
 
@@ -12,7 +12,7 @@ use crate::lattice::components::{Link, Node, Static};
 // STRUCTS
 //-------------------------------------------------------
 
-/// A resource for used for generating random numbers for 
+/// A resource for used for generating random numbers for
 /// the lattice's starting velocities
 #[derive(Resource)]
 pub struct RandomSource(pub ChaCha8Rng);
@@ -20,8 +20,7 @@ pub struct RandomSource(pub ChaCha8Rng);
 /// A plugin for the random source
 pub struct RandomSourcePlugin;
 
-
-/// Data structure for holding all of the nodes for lattice generation. 
+/// Data structure for holding all of the nodes for lattice generation.
 #[derive(Resource)]
 pub struct LatticeGen {
     /// Dim is the number of nodes along one side, NOT the number of 1x1x1 cubes along face
@@ -29,7 +28,6 @@ pub struct LatticeGen {
     /// A 1D array of all the node elements
     pub data: Vec<Entity>,
 }
-
 
 //-------------------------------------------------------
 // LATTICE GENERATION FUNCTIONS
@@ -40,39 +38,38 @@ pub struct LatticeGen {
 fn get_static_node_indices() -> Vec<(u32, u32, u32)> {
     let corner_index = lattice_config::DIM;
     vec![
-        (0,0,0),
-        (corner_index,corner_index,corner_index),
-        (corner_index,0,0),
-        (0,corner_index,0),
-        (0,0,corner_index),
-        (corner_index,corner_index,0),
-        (corner_index,0,corner_index),
-        (0,corner_index,corner_index),
+        (0, 0, 0),
+        (corner_index, corner_index, corner_index),
+        (corner_index, 0, 0),
+        (0, corner_index, 0),
+        (0, 0, corner_index),
+        (corner_index, corner_index, 0),
+        (corner_index, 0, corner_index),
+        (0, corner_index, corner_index),
     ]
 }
 
 /// Check if the link end position is out of bounds of the cube
 fn link_out_of_bounds(vec: IVec3, bounds: i32) -> bool {
-    return vec.x < 0 
-        || vec.x >= bounds 
-        || vec.y < 0                 
-        || vec.y >= bounds 
-        || vec.z < 0 
+    return vec.x < 0
+        || vec.x >= bounds
+        || vec.y < 0
+        || vec.y >= bounds
+        || vec.z < 0
         || vec.z >= bounds;
 }
 
- /// Spawn all nodes into the world
- pub fn create_all_nodes(
+/// Spawn all nodes into the world
+pub fn create_all_nodes(
     mut lattice_gen: ResMut<LatticeGen>,
     mut rng_source: ResMut<RandomSource>,
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
-
 ) {
     // Create a uniform distribution for random numbers
     let rng = &mut rng_source.0;
-    // TODO: want to move the following as a resource function, but confused on the syntax, 
+    // TODO: want to move the following as a resource function, but confused on the syntax,
     // see https://doc.rust-lang.org/std/keyword.struct.html
     let dist: Uniform<f32> =
         Uniform::new_inclusive(lattice_config::START_VEL_MIN, lattice_config::START_VEL_MAX);
@@ -83,12 +80,13 @@ fn link_out_of_bounds(vec: IVec3, bounds: i32) -> bool {
     // Define some variables for generating all the nodes
     const NODES_DIM: u32 = lattice_config::DIM + 1;
     let node_mesh = Sphere::new(lattice_config::NODE_RADIUS).mesh().uv(32, 18);
-    
+
     // Generate all nodes
     for z in 0..NODES_DIM {
         for y in 0..NODES_DIM {
             for x in 0..NODES_DIM {
-                let starting_pos = Vec3::new(x as f32, y as f32, z as f32) * lattice_config::STARTING_LINK_LEN;
+                let starting_pos =
+                    Vec3::new(x as f32, y as f32, z as f32) * lattice_config::STARTING_LINK_LEN;
                 let starting_vel = Vec3::new(rng.sample(dist), rng.sample(dist), rng.sample(dist));
 
                 let node = Node {
@@ -105,11 +103,10 @@ fn link_out_of_bounds(vec: IVec3, bounds: i32) -> bool {
                 };
 
                 // Check if it's a corner node and anchor it by spawning it with the static component.
-                if corners.contains(&(x,y,z)) {
-                    lattice_gen.add(commands.spawn((bundle,node, Static)).id());
-                }
-                else {  
-                    lattice_gen.add(commands.spawn((bundle,node)).id());
+                if corners.contains(&(x, y, z)) {
+                    lattice_gen.add(commands.spawn((bundle, node, Static)).id());
+                } else {
+                    lattice_gen.add(commands.spawn((bundle, node)).id());
                 }
             }
         }
@@ -126,7 +123,7 @@ pub fn generate_lattice(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
-    lattice_gen : Res<LatticeGen>,
+    lattice_gen: Res<LatticeGen>,
 ) {
     println!("Generating Lattice");
 
@@ -134,14 +131,20 @@ pub fn generate_lattice(
     // are only constructing the lattice in one direction.
     // This gets rid of the duplication problem.
     let dir_arr = [
-        IVec3::new(1, 0, 0), IVec3::new(0, 1, 0), IVec3::new(0, 0, 1), 
-        IVec3::new(1, 1, 0), IVec3::new(0, 1, 1), IVec3::new(1, 0, 1), 
-        IVec3::new(1, -1, 0), IVec3::new(0, 1, -1), IVec3::new(-1, 0, 1)
+        IVec3::new(1, 0, 0),
+        IVec3::new(0, 1, 0),
+        IVec3::new(0, 0, 1),
+        IVec3::new(1, 1, 0),
+        IVec3::new(0, 1, 1),
+        IVec3::new(1, 0, 1),
+        IVec3::new(1, -1, 0),
+        IVec3::new(0, 1, -1),
+        IVec3::new(-1, 0, 1),
     ];
 
-    let nodes_dim: i32 = (lattice_config::DIM + 1).try_into().expect("Could not fit DIM in i32");
+    let nodes_dim: i32 = lattice_config::DIM as i32 + 1;
     let mut counter: u32 = 0;
-    
+
     // Fill out and spawn all links
     for z in 0..nodes_dim {
         for y in 0..nodes_dim {
@@ -152,7 +155,7 @@ pub fn generate_lattice(
                     let to_node_pos = curr_node_pos + dir;
 
                     // Check if we are out of bounds
-                    if link_out_of_bounds(to_node_pos, nodes_dim){
+                    if link_out_of_bounds(to_node_pos, nodes_dim) {
                         continue;
                     }
 
@@ -175,7 +178,7 @@ pub fn generate_lattice(
                             mesh: meshes.add(link.create_mesh()),
                             material: materials.add(color),
                             // transform will be corrected once springs positions update
-                            transform: Transform::from_translation(Vec3::ZERO), 
+                            transform: Transform::from_translation(Vec3::ZERO),
                             visibility: lattice_config::LINK_VISIBILITY,
                             ..default()
                         },
@@ -193,12 +196,11 @@ pub fn generate_lattice(
     debug_assert_eq!(counter, num_links);
 }
 
-
 //-------------------------------------------------------
 // LatticeGen IMPL
 //-------------------------------------------------------
 
-impl LatticeGen {    
+impl LatticeGen {
     /// Create a new lattice data structure for the given dimension
     pub fn new(lattice_dimension: u32) -> Self {
         Self {
@@ -248,11 +250,9 @@ pub fn calc_num_links(lattice_dim: u32) -> u32 {
     }
 }
 
-
 //-------------------------------------------------------
 // RandomSourcePlugin IMPL
 //-------------------------------------------------------
-
 
 impl Plugin for RandomSourcePlugin {
     fn build(&self, app: &mut App) {

@@ -94,34 +94,36 @@ fn create_axis(
 pub struct GroundPlane;
 /// Create a ground to help with lighting
 fn create_ground(
-    commands:&mut Commands,
+    commands: &mut Commands,
     meshes: &mut ResMut<Assets<Mesh>>,
     materials: &mut ResMut<Assets<StandardMaterial>>,
 ) {
     commands.spawn((
         PbrBundle {
-            mesh: meshes.add(Plane3d::default().mesh().size(200.0,200.0).subdivisions(10)),
-            material: materials.add(
-                StandardMaterial {
-                    base_color: Color::Srgba(Srgba::hex("1F1F1F").unwrap()),
-                    // // emissive: LinearRgba::rgb(0.7, 0.7, 0.7),
-                    // perceptual_roughness: 0.0,
-                    // // reflectance: 1.0,
-                    // ior: 1.52,
-                    // thickness: 3.0,
-                    // // specular_transmission: 0.0,
-                    // metallic: 0.0,
-
-                    // base_color: Color::WHITE,
-                    // specular_transmission: 0.9,
-                    // diffuse_transmission: 1.0,
-                    // thickness: 1.8,
-                    // ior: 1.5,
-                    // perceptual_roughness: 0.12,
-
-                    ..default()
-                }
+            mesh: meshes.add(
+                Plane3d::default()
+                    .mesh()
+                    .size(200.0, 200.0)
+                    .subdivisions(10),
             ),
+            material: materials.add(StandardMaterial {
+                base_color: Color::Srgba(Srgba::hex("1F1F1F").unwrap()),
+                // // emissive: LinearRgba::rgb(0.7, 0.7, 0.7),
+                // perceptual_roughness: 0.0,
+                // // reflectance: 1.0,
+                // ior: 1.52,
+                // thickness: 3.0,
+                // // specular_transmission: 0.0,
+                // metallic: 0.0,
+
+                // base_color: Color::WHITE,
+                // specular_transmission: 0.9,
+                // diffuse_transmission: 1.0,
+                // thickness: 1.8,
+                // ior: 1.5,
+                // perceptual_roughness: 0.12,
+                ..default()
+            }),
             // material: materials.add(Color::Hsla((Hsla::new(0.4, 0.4, 0.4, 1.0)))),
             transform: Transform::from_xyz(0.0, -4.0, 0.0),
             ..default()
@@ -149,7 +151,7 @@ fn create_cameras(commands: &mut Commands) {
         // y is up in bevy
 
         // im not sure of the difference of setting here verses setting it with the unreal camera.
-        // im not even sure i need both?? 
+        // im not even sure i need both??
         transform: Transform::from_translation(STARTING_CAM_POS).looking_at(target, Vec3::Y),
         ..default()
     };
@@ -166,15 +168,12 @@ fn create_cameras(commands: &mut Commands) {
         .insert(unreal_camera);
 }
 
-pub fn lock_camera(
-    mut camera_controller: Query<&mut UnrealCameraController>,
-) {
+pub fn lock_camera(mut camera_controller: Query<&mut UnrealCameraController>) {
     for mut cam in camera_controller.iter_mut() {
         cam.enabled ^= true;
         println!("Cam is now {}", cam.enabled)
     }
 }
-
 
 //////////////////////////////////////////////////
 /// LIGHTING
@@ -187,15 +186,15 @@ pub fn lock_camera(
 fn create_light(commands: &mut Commands, gizmo_store: &mut ResMut<GizmoConfigStore>) {
     // Light
 
-
-    let mut new_pos = Transform::from_translation(
-        Vec3::splat(lattice_config::DIM as f32 * lattice_config::STARTING_LINK_LEN + lattice_config::STARTING_LINK_LEN*3.)
-    ).looking_at(Vec3::new(5.0, 0.0, 5.0), Vec3::Y);
+    let mut new_pos = Transform::from_translation(Vec3::splat(
+        lattice_config::DIM as f32 * lattice_config::STARTING_LINK_LEN
+            + lattice_config::STARTING_LINK_LEN * 3.,
+    ))
+    .looking_at(Vec3::new(5.0, 0.0, 5.0), Vec3::Y);
     // new_pos.translation.z += 5.0;
     // new_pos.translation.x += 5.0;
 
     // let mut new_pos = Transform::from_xyz(0.0,20.0,0.0).looking_at(Vec3::ZERO, Vec3::Y);
-
 
     //TODO: lights are confusing me, they are working backwards as i would expect them to.
     // like placing the light at all postivies values and spawning the camera there, looking at the cube
@@ -210,9 +209,11 @@ fn create_light(commands: &mut Commands, gizmo_store: &mut ResMut<GizmoConfigSto
             ..default()
         },
         // transform: Transform::from_translation(lights_config::POS),
-        transform: Transform::from_translation(
-            Vec3::splat(lattice_config::DIM as f32 * lattice_config::STARTING_LINK_LEN + lattice_config::STARTING_LINK_LEN*2.)
-        ).looking_at(Vec3::ZERO, Vec3::Y),
+        transform: Transform::from_translation(Vec3::splat(
+            lattice_config::DIM as f32 * lattice_config::STARTING_LINK_LEN
+                + lattice_config::STARTING_LINK_LEN * 2.,
+        ))
+        .looking_at(Vec3::ZERO, Vec3::Y),
         ..default()
     };
 
@@ -227,9 +228,11 @@ fn create_light(commands: &mut Commands, gizmo_store: &mut ResMut<GizmoConfigSto
             ..default()
         },
         // transform: Transform::from_translation(lights_config::POS_2),
-        transform: Transform::from_translation(
-            Vec3::splat(-1. * lattice_config::DIM as f32 * lattice_config::STARTING_LINK_LEN + lattice_config::STARTING_LINK_LEN*3.)
-        ).looking_at(Vec3::ZERO, Vec3::Y),
+        transform: Transform::from_translation(Vec3::splat(
+            -1. * lattice_config::DIM as f32 * lattice_config::STARTING_LINK_LEN
+                + lattice_config::STARTING_LINK_LEN * 3.,
+        ))
+        .looking_at(Vec3::ZERO, Vec3::Y),
         ..default()
     };
 
@@ -247,11 +250,15 @@ fn create_light(commands: &mut Commands, gizmo_store: &mut ResMut<GizmoConfigSto
         ..default()
     };
 
-
-    let mut shadow_behind_light = Transform::from_translation(-1.0 * Vec3::splat(lattice_config::DIM as f32 * lattice_config::STARTING_LINK_LEN - 3.0));
-    shadow_behind_light.translation.y = shadow_behind_light.translation.y*-1.0 + 6.0;
+    let mut shadow_behind_light = Transform::from_translation(
+        -1.0 * Vec3::splat(lattice_config::DIM as f32 * lattice_config::STARTING_LINK_LEN - 3.0),
+    );
+    shadow_behind_light.translation.y = shadow_behind_light.translation.y * -1.0 + 6.0;
     shadow_behind_light.translation.x += 3.0;
-    shadow_behind_light.look_at(Vec3::splat(lattice_config::DIM as f32 * lattice_config::STARTING_LINK_LEN)/2.0, Vec3::Y);
+    shadow_behind_light.look_at(
+        Vec3::splat(lattice_config::DIM as f32 * lattice_config::STARTING_LINK_LEN) / 2.0,
+        Vec3::Y,
+    );
 
     let point_light_bundle_4 = SpotLightBundle {
         spot_light: SpotLight {
@@ -280,7 +287,8 @@ fn create_light(commands: &mut Commands, gizmo_store: &mut ResMut<GizmoConfigSto
             ..default()
         },
         // transform: Transform::from_translation(lights_config::POS_2),
-        transform: Transform::from_xyz(xy_pox, camera_height, xy_pox).looking_at(Vec3::new(xy_pox, 0.0, xy_pox), Vec3::Y),
+        transform: Transform::from_xyz(xy_pox, camera_height, xy_pox)
+            .looking_at(Vec3::new(xy_pox, 0.0, xy_pox), Vec3::Y),
         ..default()
     };
 
@@ -295,21 +303,19 @@ fn create_light(commands: &mut Commands, gizmo_store: &mut ResMut<GizmoConfigSto
     // let (_, light_config) = gizmo_store.config_mut::<LightGizmoConfigGroup>();
     // light_config.draw_all = true;
     // light_config.color = LightGizmoColor::Varied;
-
 }
-
 
 pub fn animate_ground(
     material_handles: Query<&Handle<StandardMaterial>, With<GroundPlane>>,
     time: Res<Time>,
     mut materials: ResMut<Assets<StandardMaterial>>,
-){
+) {
     let handle = material_handles.single();
-    if let Some(material) = materials.get_mut(handle){
+    if let Some(material) = materials.get_mut(handle) {
         if let Color::Srgba(ref mut srgb) = material.base_color {
-            let mut color = 0.5*f32::sin(time.elapsed_seconds()*57.0) + 0.5;
-            color = color.clamp(1.0/31.0, 1.0);
-            *srgb = Srgba::rgb(color,color,color);
+            let mut color = 0.5 * f32::sin(time.elapsed_seconds() * 57.0) + 0.5;
+            color = color.clamp(1.0 / 31.0, 1.0);
+            *srgb = Srgba::rgb(color, color, color);
         }
     }
 }

@@ -1,12 +1,11 @@
 use bevy::{
     diagnostic::{
-        DiagnosticsStore, 
-        EntityCountDiagnosticsPlugin, 
-        FrameTimeDiagnosticsPlugin,
+        DiagnosticsStore, EntityCountDiagnosticsPlugin, FrameTimeDiagnosticsPlugin,
         LogDiagnosticsPlugin,
-    }, 
-    input::common_conditions::input_just_pressed, prelude::*, 
-    time::common_conditions::{on_timer, once_after_delay, repeating_after_delay}
+    },
+    input::common_conditions::input_just_pressed,
+    prelude::*,
+    time::common_conditions::{on_timer, once_after_delay, repeating_after_delay},
 };
 use lattice::LatticePlugin;
 
@@ -17,9 +16,9 @@ use smooth_bevy_cameras::LookTransformPlugin;
 
 //TODO: ADD THIS FPS OVERLAY https://bevyengine.org/examples/ui-user-interface/text/
 
-mod config; 
-mod scene;
+mod config;
 mod lattice;
+mod scene;
 
 fn main() {
     App::new()
@@ -36,12 +35,17 @@ fn main() {
         .insert_resource(ClearColor(Srgba::hex("3b4a56").unwrap().into()))
         .add_systems(Startup, scene::setup)
         // no stopping user from running draw_xyz
-        .add_systems(Update, scene::draw_xyz.run_if(input_just_pressed(KeyCode::KeyO)))
-        .add_systems(Update, scene::lock_camera.run_if(input_just_pressed(KeyCode::KeyL)))
+        .add_systems(
+            Update,
+            scene::draw_xyz.run_if(input_just_pressed(KeyCode::KeyO)),
+        )
+        .add_systems(
+            Update,
+            scene::lock_camera.run_if(input_just_pressed(KeyCode::KeyL)),
+        )
         // .add_systems(Update, scene::animate_ground)
         .run();
 }
-
 
 // driver code
 // System enables diagnositcs for 10 seconds, then disables for 10 seconds.
@@ -50,7 +54,6 @@ fn main() {
 //     Update,
 //     toggle.run_if(on_timer(Duration::from_secs_f32(10.0))), //interesting
 // )
-
 
 // fn toggle(mut store: ResMut<DiagnosticsStore>) {
 //     for diag in store.iter_mut() {
