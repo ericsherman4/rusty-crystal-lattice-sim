@@ -9,7 +9,7 @@ use crate::lattice::components::{Link, Node, Static};
 // use crate::lattice::components
 
 //-------------------------------------------------------
-// STRUCTS
+// RandomSource Structs
 //-------------------------------------------------------
 
 /// A resource for used for generating random numbers for
@@ -20,14 +20,49 @@ pub struct RandomSource(pub ChaCha8Rng);
 /// A plugin for the random source
 pub struct RandomSourcePlugin;
 
+//-------------------------------------------------------
+// LatticeGen Structs and Enums
+//-------------------------------------------------------
+
 /// Data structure for holding all of the nodes for lattice generation.
 #[derive(Resource)]
 pub struct LatticeGen {
     /// Dim is the number of nodes along one side, NOT the number of 1x1x1 cubes along face
     pub nodes_dim: u32,
+    /// Lattice dim
+    pub lattice_dim: u32,
     /// A 1D array of all the node elements
     pub data: Vec<Entity>,
 }
+
+enum LatticeGenState {
+    InBoundAnimMaterial, 
+    OutofBoundAnimMaterial,
+    CheckingDirections,
+    NewPosition, 
+    FinalCheck,
+}
+
+#[derive(Resource)]
+pub struct LatticeGenAnim {
+    /// Current x position of the generation
+    x: i32,
+    /// Current y position of the generation    
+    y: i32,
+    /// Current z position of the generation        
+    z: i32,
+    /// Current direction index of the generation
+    dir_idx: usize,
+    /// Array of the directions to check
+    dir_arr: Vec<IVec3>,
+    /// Current state of the generation
+    state: LatticeGenState,
+    /// Num links generated so far
+    links_counter: u32,
+    /// Current link entity
+    curr_link: Option<Entity>
+}
+
 
 //-------------------------------------------------------
 // LATTICE GENERATION FUNCTIONS
@@ -119,6 +154,92 @@ pub fn create_all_nodes(
     );
 }
 
+/// Called repeatedly to update
+pub fn generate_lattice_animated(
+    mut commands: Commands,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+    mut anim: ResMut<LatticeGenAnim>,
+    lattice_gen: Res<LatticeGen>,
+    time: Res<Time>,
+){
+
+    let nodes_dim = lattice_gen.nodes_dim as i32; 
+
+    match anim.state { 
+        LatticeGenState::CheckingDirections => {
+            if anim.dir_idx > anim.dir_arr.len() {
+                anim.state = LatticeGenState::NewPosition;
+                anim.reset_direction();
+            }
+            else{
+                let curr_node_pos = IVec3 { x: anim.x, y: anim.y, z: anim.z };
+                let to_node_pos = curr_node_pos + anim.dir_arr[anim.dir_idx];
+
+                // Difference now is that no matter what we generate the link and then maybe despawn it
+                let to_node = lattice_gen.get(to_node_pos.as_uvec3());
+                let from_node = lattice_gen.get(curr_node_pos.as_uvec3());
+
+                // Determine the length of the spring, diagonal springs will not be the same starting length
+                // as horizontal and vertical ones
+                let length = (to_node_pos.as_vec3() - curr_node_pos.as_vec3()).length();
+
+                 // Create a new Link / Spring and spawn
+                 let link = Link::new(lattice_config::SPRING_CONST, length, to_node, from_node);
+                 commands.spawn((
+                     PbrBundle {
+                         mesh: meshes.add(link.create_mesh()),
+                         material: materials.add(Color::WHITE),
+                         // transform will be corrected once springs positions update
+                         transform: Transform::from_translation(Vec3::ZERO),
+                         visibility: lattice_config::LINK_VISIBILITY,
+                         ..default()
+                     },
+                     link,
+                 ));
+
+
+                // Check if we are out of bounds
+                // Uncommenting for now cause we would get stuck
+                // if link_out_of_bounds(to_node_pos, nodes_dim) {
+                //     anim.state =  LatticeGenState::OutofBoundAnimMaterial;
+                // }
+                // else{
+                //     anim.state = LatticeGenState::InBoundAnimMaterial;
+                // }
+
+                anim.dir_idx += 1;
+            }
+        },
+        LatticeGenState::NewPosition => {
+            let final_pos = nodes_dim - 1;
+            if anim.x == final_pos && anim.y == final_pos && anim.z == final_pos {
+                anim.state = LatticeGenState::CheckingDirections;
+            }
+
+            if anim.x < nodes_dim {
+                anim.x += 1;
+                return;
+            }
+            anim.x = 0;
+            
+            if anim.y < nodes_dim {
+                anim.y += 1;
+                return;
+            }
+            
+            anim.y = 0;
+            if anim.z < nodes_dim {
+                anim.z += 1;
+                return;
+            }
+        }
+
+        _ => {}
+    }
+}
+
+
 pub fn generate_lattice(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
@@ -142,7 +263,7 @@ pub fn generate_lattice(
         IVec3::new(-1, 0, 1),
     ];
 
-    let nodes_dim: i32 = lattice_config::DIM as i32 + 1;
+    let nodes_dim: i32 = lattice_gen.nodes_dim as i32;
     let mut counter: u32 = 0;
 
     // Fill out and spawn all links
@@ -206,6 +327,7 @@ impl LatticeGen {
         Self {
             // all internal math is based on num nodes on one side so dim + 1
             nodes_dim: lattice_dimension + 1,
+            lattice_dim: lattice_dimension,
             data: Vec::with_capacity(calc_num_nodes(lattice_dimension) as usize),
         }
     }
@@ -268,5 +390,44 @@ impl RandomSourcePlugin {
         let seeded_rng = ChaCha8Rng::seed_from_u64(keyboard_mashing);
         commands.insert_resource(RandomSource(seeded_rng));
         println!("Successfully added RNG");
+    }
+}
+
+//-------------------------------------------------------
+// LatticeGenAnim IMPL
+//-------------------------------------------------------
+
+impl LatticeGenAnim {
+    pub fn new() -> Self {
+        LatticeGenAnim {
+            x : 0, 
+            y: 0,
+            z: 0,
+            dir_arr: Self::get_direction_vec(),
+            dir_idx: 0,
+            state: LatticeGenState::CheckingDirections, 
+            links_counter: 0,
+            curr_link: None,
+        }
+    }
+
+    /// Return a vector of all the directions to check
+    /// when generating the lattice
+    fn get_direction_vec() -> Vec<IVec3> {
+        vec![
+            IVec3::new(1, 0, 0),
+            IVec3::new(0, 1, 0),
+            IVec3::new(0, 0, 1),
+            IVec3::new(1, 1, 0),
+            IVec3::new(0, 1, 1),
+            IVec3::new(1, 0, 1),
+            IVec3::new(1, -1, 0),
+            IVec3::new(0, 1, -1),
+            IVec3::new(-1, 0, 1),
+        ]
+    }
+
+    fn reset_direction(&mut self) {
+        self.dir_idx = 0;
     }
 }

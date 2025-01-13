@@ -10,7 +10,7 @@ mod components;
 mod lattice_gen;
 use crate::config::{colors_config, lattice_config};
 use components::{Link, Node, Static};
-use lattice_gen::{create_all_nodes, generate_lattice, LatticeGen, RandomSourcePlugin};
+use lattice_gen::{create_all_nodes, generate_lattice, generate_lattice_animated, LatticeGen, RandomSourcePlugin, LatticeGenAnim};
 
 //-------------------------------------------------------
 // STRUCTS
@@ -47,12 +47,14 @@ impl Plugin for LatticePlugin {
         app.insert_resource(Time::<Fixed>::from_duration(Duration::from_millis(10)));
         app.insert_resource(SimulationData::default());
         app.insert_resource(LatticeGen::new(lattice_config::DIM));
+        app.insert_resource(LatticeGenAnim::new());
 
         app.add_systems(Update, rotate_around_center);
 
         app.add_systems(
             Update,
-            (create_all_nodes, generate_lattice)
+            // (create_all_nodes, generate_lattice)
+            (create_all_nodes, generate_lattice_animated)
                 .chain()
                 .run_if(once_after_delay(LATTICE_START_DELAY)),
         );
