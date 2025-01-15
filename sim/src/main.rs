@@ -32,7 +32,8 @@ fn main() {
             // LogDiagnosticsPlugin::default(),
             //TODO: check out https://docs.rs/bevy/0.14.2/bevy/render/diagnostic/struct.RenderDiagnosticsPlugin.html
         ))
-        .insert_resource(ClearColor(Srgba::hex("3b4a56").unwrap().into()))
+        // .insert_resource(ClearColor(Srgba::hex("3b4a56").unwrap().into())), color for video
+        .insert_resource(ClearColor(Srgba::hex("000000").unwrap().into()))
         .add_systems(Startup, scene::setup)
         // no stopping user from running draw_xyz
         .add_systems(

@@ -25,7 +25,7 @@ pub struct Link {
     pub spring_const: f32,
     pub delta_spring_length_pre: f32,
     pub orig_length: f32,
-    pub to: Entity,
+    pub to: Option<Entity>,
     pub from: Entity,
 }
 
@@ -48,7 +48,7 @@ impl Link {
     /// Create a new link.
     /// From denotes from which node the link is connected and
     /// to denotes to which node the link is connected
-    pub fn new(spring_const: f32, orig_length: f32, to: Entity, from: Entity) -> Self {
+    pub fn new(spring_const: f32, orig_length: f32, to: Option<Entity>, from: Entity) -> Self {
         // function returns an instance of Link
         // When function names are the same as field names, don't need to type it twice.
         Link {

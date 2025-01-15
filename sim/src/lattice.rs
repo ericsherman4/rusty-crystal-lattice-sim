@@ -22,7 +22,21 @@ pub struct SimulationData {
     center_of_mass: Transform,
 }
 
+/// Plugin for running simulating the lattice and also providing
+/// some carmera controls
 pub struct LatticePlugin;
+
+//-------------------------------------------------------
+// ENUMS
+//-------------------------------------------------------
+
+#[allow(dead_code)]
+enum SpringMaterialMode {
+    FORCE3D,
+    FORCE1D,
+    VELOCITY1D,
+    NONE,
+}
 
 //-------------------------------------------------------
 // IMPLEMENTATIONS
@@ -63,27 +77,31 @@ impl Plugin for LatticePlugin {
             app.add_systems(
                 Update, create_all_nodes.run_if(once_after_delay(LATTICE_START_DELAY)),
             );
-            app.add_systems(Update, generate_lattice_animated
-                .after(create_all_nodes)
-                // .run_if(on_timer(Duration::from_millis(1)))
-                .run_if(repeating_after_delay(LATTICE_START_DELAY)));
+            // You can this to speed or slow down the generation as the generation will only ever run
+            // as faster as the framerate since it is on an Update schedule
+            for _ in 0..11 {
+                app.add_systems(Update, generate_lattice_animated
+                    .after(create_all_nodes)
+                    // .run_if(on_timer(Duration::from_millis(200)))
+                    .run_if(repeating_after_delay(LATTICE_START_DELAY)));
+            }
         }
 
 
         app.add_systems(
             FixedUpdate,
             (
-                // update_nodes_state, 
-                // update_link_physics, 
+                update_nodes_state, 
+                update_link_physics, 
                 update_spring
             ).chain().run_if(repeating_after_delay(LATTICE_START_DELAY)),
         );
 
         app.add_systems(Update, update_center_of_mass);
-        // app.add_systems(
-        //     Update,
-        //     print_kinetic_energy.run_if(on_timer(Duration::from_secs_f32(0.5))),
-        // );
+        app.add_systems(
+            Update,
+            print_kinetic_energy.run_if(on_timer(Duration::from_secs_f32(0.5))),
+        );
     }
 }
 
@@ -196,12 +214,18 @@ pub fn update_link_physics(
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
     let delta_t = time.delta_seconds();
-    const DAMPING: f32 = 5.0; // 30 at damping and vel at 20 is pretty cool and div spring displament by 5
+    const DAMPING: f32 = 30.0; // 30 at damping and vel at 20 is pretty cool and div spring displament by 5
 
-    for (mut link, mut material_handle) in links.iter_mut() {
+    for (mut link, material_handle) in links.iter_mut() {
+
+        // For now if there aren't two nodes connecting the spring, just skip
+        match link.to {
+            None => continue,
+            _ => {}
+        }
 
         let node_from = nodes.get(link.from).unwrap();
-        let node_to = nodes.get(link.to).unwrap();
+        let node_to = nodes.get(link.to.unwrap()).unwrap();
 
         let node_to_pos = node_to.0.pos;
         let node_from_pos = node_from.0.pos;
@@ -220,20 +244,34 @@ pub fn update_link_physics(
         let from_force = -0.5 * total_force * force_dir;
         let to_force = -from_force;
 
+        // MESSING WITH MATERIALS
         // https://github.com/bevyengine/bevy/discussions/8487
+        let material_mode = SpringMaterialMode::NONE;
+        // FIXME: shouldnt do this lookup if we don't have to
         let material = materials.get_mut(material_handle).unwrap();
-        // Doing it by force the spring exerts
-        // if let Some(force_color) = from_force.try_normalize() {
-        //     let scaled_vec = force_color * 0.5 + Vec3::splat(0.5);
-        //     material.base_color = Color::srgb(scaled_vec.x, scaled_vec.y, scaled_vec.z);
-        // }
-        // Doing it by the velocity. Apply the gain to get the colors to show more when velocity is low
-        // let normalized_vel = f32::abs(velocity) / 255.0  * 40.0;
-        // material.base_color = Color::srgb(normalized_vel, 0.0,0.0);
+        match material_mode {
+            SpringMaterialMode::FORCE3D => {
+                // Doing it by force the spring exerts
+                if let Some(force_color) = from_force.try_normalize() {
+                    let scaled_vec = force_color * 0.5 + Vec3::splat(0.5);
+                    material.base_color = Color::srgb(scaled_vec.x, scaled_vec.y, scaled_vec.z);
+                }
+            }
+            SpringMaterialMode::FORCE1D => {
+                // Doing it by magnitude of the force
+                material.base_color = Color::srgb((from_force.length() /  255.0).clamp(0.0, 2.0), 0.0, 0.0);
+            }
+            SpringMaterialMode::VELOCITY1D => {
+                // Doing it by the velocity. Apply the gain to get the colors to show more when velocity is low
+                let normalized_vel = f32::abs(velocity) / 255.0  * 40.0;
+                material.base_color = Color::srgb(normalized_vel.clamp(0.0, 1.5), 0.0 ,0.0);
+            }
+            SpringMaterialMode::NONE => {}
+        }
 
         // this force is applied in the axis colinear from node 1 to node 2
         nodes.get_mut(link.from).unwrap().0.sum_forces += from_force;
-        nodes.get_mut(link.to).unwrap().0.sum_forces += to_force;
+        nodes.get_mut(link.to.unwrap()).unwrap().0.sum_forces += to_force;
     }
 }
 
@@ -243,10 +281,15 @@ pub fn update_spring(
     nodes: Query<&Node>,
 ) {
     for (link, mut transform) in links.iter_mut() {
-        // expect and unwrap not encouraged to use, see
-        // https://doc.rust-lang.org/book/ch09-02-recoverable-errors-with-result.html
+        
+        // For now if there aren't two nodes connecting the spring, just skip
+        match link.to {
+            None => continue,
+            _ => {}
+        }
+        
         let node_to = nodes
-            .get(link.to)
+            .get(link.to.unwrap())
             .expect("The node should exist as no nodes are ever despawned.");
         let node_from = nodes
             .get(link.from)
@@ -268,7 +311,7 @@ pub fn update_spring(
         // I want Z to point to the vector from node_from to node_to or the dir vector
         // The secondary axis - just using Y, I assume X would work, I want to point to a vector orthogonal to the dir vector.
         // I get this vector by crossing the direction vector node_from vector.
-        *transform = transform.aligned_by(Vec3::Z, dir, Vec3::Y, dir.cross(node_from.pos));
+        // *transform = transform.aligned_by(Dir3::Z, dir, Dir3::Y, dir.cross(node_from.pos)); // will rotate and also glitches
         // okay the cross thing is nice but i think that was causing a lot of them to spin which makes sense
         // because dir cross node_from trans could point in any outward direction really.
         // *transform = transform.aligned_by(Vec3::Z, dir, Vec3::Y, Vec3::splat(100.0));  //this seems to cause the sticks to glitch occasionally.
@@ -278,5 +321,15 @@ pub fn update_spring(
 
         // note that the following doesnt work but produces awesome results
         // *transform = transform.looking_to(node_to.pos,  dir.cross(node_from.pos))
+
+        //trying to fix again, seems to be good so far
+        // since it looks like the align function is just calling from rotation arc
+        // transform.rotation = Quat::from_rotation_arc(transform.local_z().try_into().unwrap(), dir.normalize());
+        transform.rotation = Quat::from_rotation_arc(Vec3::Z, dir.normalize());
+        if !transform.rotation.is_normalized() {
+            transform.rotation = transform.rotation.normalize();
+        }
+
+
     }
 }
