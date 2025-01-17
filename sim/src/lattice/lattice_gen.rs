@@ -123,7 +123,10 @@ pub fn create_all_nodes(
             for x in 0..NODES_DIM {
                 let starting_pos =
                     Vec3::new(x as f32, y as f32, z as f32) * lattice_config::STARTING_LINK_LEN;
-                let starting_vel = Vec3::new(rng.sample(dist), rng.sample(dist), rng.sample(dist));
+                // let starting_vel = Vec3::new(rng.sample(dist), rng.sample(dist), rng.sample(dist));
+
+                let starting_vel = Vec3::new(rng.sample(dist) / 4.0, rng.sample(dist)/4.0, f32::abs(rng.sample(dist))* 5.0);
+
 
                 let node = Node {
                     pos: starting_pos,
@@ -165,6 +168,8 @@ pub fn generate_lattice_animated(
     lattice_gen: Res<LatticeGen>,
 ){
 
+    //FIXME: link length of 2 doesnt work, still making a 1x1x1 cube
+
     let nodes_dim = lattice_gen.nodes_dim as i32; 
 
     // println!("Processing state {:?}", anim.state);
@@ -188,11 +193,11 @@ pub fn generate_lattice_animated(
             // Difference now is that no matter what we generate the link and then maybe despawn it
             if link_out_of_bounds(to_node_pos, nodes_dim) {
                 anim.state =  LatticeGenState::DespawnOutOfBound;
-                color = Color::WHITE;
+                color = Color::srgb(1.0, 0.0, 0.0);
 
             }
             else{
-                 // Generate a color that creates a gradient across the cube
+                // Generate a color that creates a gradient across the cube using the position
                 let position = curr_node_pos.as_vec3() / nodes_dim as f32;
                 color = Color::srgb(position.x, position.y, position.z);
                 to_node = Some(lattice_gen.get(to_node_pos.as_uvec3()));
@@ -200,6 +205,7 @@ pub fn generate_lattice_animated(
 
             // Determine the length of the spring, diagonal springs will not be the same starting length
             // as horizontal and vertical ones
+            // need to account for the starting link length
             let dir = to_node_pos.as_vec3() - curr_node_pos.as_vec3();
             let length = dir.length();
 

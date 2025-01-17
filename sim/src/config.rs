@@ -11,9 +11,9 @@ pub mod colors_config {
 pub mod lattice_config {
     use bevy::prelude::Visibility;
 
-    pub const DIM: u32 = 6; // TODO: CAN YOU INTENTIONALLY PARALLEIZE THE QUERIES FOR THE UPDATE?
+    pub const DIM: u32 = 7; // TODO: CAN YOU INTENTIONALLY PARALLEIZE THE QUERIES FOR THE UPDATE?
     pub const LINK_RADIUS: f32 = 0.05; //x and y component of cuboid get this
-    pub const STARTING_LINK_LEN: f32 = 1.; // z component of cuboid gets this
+    pub const STARTING_LINK_LEN: f32 = 2.; // z component of cuboid gets this
     pub const LINK_VISIBILITY: Visibility = Visibility::Visible;
 
     pub const NODE_RADIUS: f32 = LINK_RADIUS / 2.0;
@@ -21,7 +21,7 @@ pub mod lattice_config {
 
     pub const SPRING_CONST: f32 = 3.0;
 
-    const START_VEL_ABS: f32 = 0.9;
+    const START_VEL_ABS: f32 = 0.01;
     pub const START_VEL_MIN: f32 = -START_VEL_ABS;
     pub const START_VEL_MAX: f32 = START_VEL_ABS;
 }
@@ -38,7 +38,7 @@ pub mod lights_config {
 
 pub mod cam_config {
     use bevy::math::Vec3;
-    pub const POS: Vec3 = Vec3::new(-10., 11., -10.0);
+    pub const POS: Vec3 = Vec3::new(-20., 22., -20.0);
 }
 
 pub mod axis_config {

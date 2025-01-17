@@ -53,7 +53,7 @@ impl Default for SimulationData {
 
 impl Plugin for LatticePlugin {
     fn build(&self, app: &mut App) {
-        const LATTICE_START_DELAY: Duration = Duration::from_millis(1_000);
+        const LATTICE_START_DELAY: Duration = Duration::from_millis(4_000);
 
         // Inserts the rng to generate the lattice
         app.add_plugins(RandomSourcePlugin);
@@ -79,7 +79,7 @@ impl Plugin for LatticePlugin {
             );
             // You can this to speed or slow down the generation as the generation will only ever run
             // as faster as the framerate since it is on an Update schedule
-            for _ in 0..11 {
+            for _ in 0..2 {
                 app.add_systems(Update, generate_lattice_animated
                     .after(create_all_nodes)
                     // .run_if(on_timer(Duration::from_millis(200)))
@@ -214,7 +214,7 @@ pub fn update_link_physics(
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
     let delta_t = time.delta_seconds();
-    const DAMPING: f32 = 30.0; // 30 at damping and vel at 20 is pretty cool and div spring displament by 5
+    const DAMPING: f32 = 5.0; // 30 at damping and vel at 20 is pretty cool and div spring displament by 5
 
     for (mut link, material_handle) in links.iter_mut() {
 
