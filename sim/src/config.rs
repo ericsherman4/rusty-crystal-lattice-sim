@@ -29,7 +29,7 @@ pub mod lattice_config {
 pub mod lights_config {
     use bevy::math::Vec3;
 
-    pub const SPOT_LIGHT_SHADOWS: bool = false;
+    pub const SPOT_LIGHT_SHADOWS: bool = true;
 
     pub const POS_COMPONENT: f32 = 10.0;
     pub const POS: Vec3 = Vec3::splat(POS_COMPONENT);

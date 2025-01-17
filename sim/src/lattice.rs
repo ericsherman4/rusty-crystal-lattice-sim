@@ -53,7 +53,7 @@ impl Default for SimulationData {
 
 impl Plugin for LatticePlugin {
     fn build(&self, app: &mut App) {
-        const LATTICE_START_DELAY: Duration = Duration::from_millis(1_000);
+        const LATTICE_START_DELAY: Duration = Duration::from_millis(4_000);
 
         // Inserts the rng to generate the lattice
         app.add_plugins(RandomSourcePlugin);
@@ -246,7 +246,7 @@ pub fn update_link_physics(
 
         // MESSING WITH MATERIALS
         // https://github.com/bevyengine/bevy/discussions/8487
-        let material_mode = SpringMaterialMode::NONE;
+        let material_mode = SpringMaterialMode::FORCE1D;
         // FIXME: shouldnt do this lookup if we don't have to
         let material = materials.get_mut(material_handle).unwrap();
         match material_mode {
@@ -259,7 +259,7 @@ pub fn update_link_physics(
             }
             SpringMaterialMode::FORCE1D => {
                 // Doing it by magnitude of the force
-                material.base_color = Color::srgb((from_force.length() /  255.0).clamp(0.0, 2.0), 0.0, 0.0);
+                material.base_color = Color::srgb((from_force.length() /  255.0* 4.0).clamp(0.0, 2.0), 0.0, 0.0); //TODO: why does changing from *4.0 to *5.0 totally change the animation?
             }
             SpringMaterialMode::VELOCITY1D => {
                 // Doing it by the velocity. Apply the gain to get the colors to show more when velocity is low

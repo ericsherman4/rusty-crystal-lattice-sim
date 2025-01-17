@@ -1,3 +1,5 @@
+use std::f32::consts::PI;
+
 use crate::config::{axis_config, cam_config, colors_config, lattice_config, lights_config};
 use bevy::{math::VectorSpace, prelude::*};
 use smooth_bevy_cameras::controllers::unreal::{UnrealCameraBundle, UnrealCameraController};
@@ -24,7 +26,7 @@ pub fn setup(
 ) {
     create_light(&mut commands, &mut config_store);
     create_cameras(&mut commands);
-    // create_ground(&mut commands,&mut meshes, &mut materials);
+    create_ground(&mut commands,&mut meshes, &mut materials);
 }
 
 pub fn draw_xyz(
@@ -129,6 +131,74 @@ fn create_ground(
             ..default()
         },
         GroundPlane,
+    ));
+
+    commands.spawn((
+        PbrBundle {
+            mesh: meshes.add(
+                Plane3d::default()
+                    .mesh()
+                    .size(200.0, 200.0)
+                    .subdivisions(10),
+            ),
+            material: materials.add(StandardMaterial {
+                base_color: Color::Srgba(Srgba::hex("1F1F1F").unwrap()),
+                ..default()
+            }),
+            transform: Transform::from_xyz(0.0, 0.0, 20.0).with_rotation(Quat::from_euler(EulerRot::XYZ, -PI/2.0, 0.0, 0.0)),
+            ..default()
+        },
+    ));
+
+    commands.spawn((
+        PbrBundle {
+            mesh: meshes.add(
+                Plane3d::default()
+                    .mesh()
+                    .size(200.0, 200.0)
+                    .subdivisions(10),
+            ),
+            material: materials.add(StandardMaterial {
+                base_color: Color::Srgba(Srgba::hex("1F1F1F").unwrap()),
+                ..default()
+            }),
+            transform: Transform::from_xyz(20.0, 0.0, 0.0).with_rotation(Quat::from_rotation_z(PI/2.0)),
+            ..default()
+        },
+    ));
+
+    commands.spawn((
+        PbrBundle {
+            mesh: meshes.add(
+                Plane3d::default()
+                    .mesh()
+                    .size(200.0, 200.0)
+                    .subdivisions(10),
+            ),
+            material: materials.add(StandardMaterial {
+                base_color: Color::Srgba(Srgba::hex("1F1F1F").unwrap()),
+                ..default()
+            }),
+            transform: Transform::from_xyz(-40.0, 0.0, 0.0).with_rotation(Quat::from_rotation_z(-PI/2.0)),
+            ..default()
+        },
+    ));
+
+    commands.spawn((
+        PbrBundle {
+            mesh: meshes.add(
+                Plane3d::default()
+                    .mesh()
+                    .size(200.0, 200.0)
+                    .subdivisions(10),
+            ),
+            material: materials.add(StandardMaterial {
+                base_color: Color::Srgba(Srgba::hex("1F1F1F").unwrap()),
+                ..default()
+            }),
+            transform: Transform::from_xyz(0.0, 0.0, -40.0).with_rotation(Quat::from_euler(EulerRot::XYZ, PI/2.0, 0.0, 0.0)),
+            ..default()
+        },
     ));
 }
 
