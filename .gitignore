@@ -15,3 +15,7 @@ target/
 
 # Old Notes on the subject
 *.pdf
+
+# Ignore manim things
+visuals/__pycache__
+visuals/media
