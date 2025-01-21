@@ -53,7 +53,7 @@ impl Default for SimulationData {
 
 impl Plugin for LatticePlugin {
     fn build(&self, app: &mut App) {
-        const LATTICE_START_DELAY: Duration = Duration::from_millis(1_000);
+        const LATTICE_START_DELAY: Duration = Duration::from_millis(lattice_config::START_DELAY_MS);
 
         // Inserts the rng to generate the lattice
         app.add_plugins(RandomSourcePlugin);
@@ -79,10 +79,10 @@ impl Plugin for LatticePlugin {
             );
             // You can this to speed or slow down the generation as the generation will only ever run
             // as faster as the framerate since it is on an Update schedule
-            for _ in 0..11 {
+            for _ in 0..lattice_config::GEN_ANIM_INSTANCES {
                 app.add_systems(Update, generate_lattice_animated
                     .after(create_all_nodes)
-                    // .run_if(on_timer(Duration::from_millis(200)))
+                    // .run_if(on_timer(Duration::from_millis(100)))
                     .run_if(repeating_after_delay(LATTICE_START_DELAY)));
             }
         }
@@ -91,8 +91,8 @@ impl Plugin for LatticePlugin {
         app.add_systems(
             FixedUpdate,
             (
-                update_nodes_state, 
-                update_link_physics, 
+                // update_nodes_state, 
+                // update_link_physics, 
                 update_spring
             ).chain().run_if(repeating_after_delay(LATTICE_START_DELAY)),
         );
