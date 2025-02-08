@@ -22,7 +22,7 @@ class CreateCircle(Scene):
 # sections maybe? https://docs.manim.community/en/stable/tutorials/output_and_config.html#sections 
 # but idk how to use them with the sideview
 
-class InfluenceDiagram(ThreeDScene):
+class InfluenceDiagram(Scene):
     def construct(self):
         # self.next_section(skip_animations=True)
         # group = VGroup()
@@ -32,15 +32,18 @@ class InfluenceDiagram(ThreeDScene):
         # self.play(Create(group ))
         # self.wait(1)
 
+        self.next_section(skip_animations=True)
+
+
         # making the component model
         group = VGroup() # does not mean vertical group
-        items = ["Node Force", "Node Acceleration", "Node Velocity", "Node Position"]
+        items = [r"Node\;Force", r"Node\;Acceleration", r"Node\;Velocity", r"Node\;Position"]
+        colors = [BLUE_A, BLUE_B,BLUE_C,BLUE_D]
         for i,item in enumerate(items):
-            group += Arrow(UP*1.3,  0.0*DOWN, color =BLUE)
-            group += Text(item, font_size=20)   
+            group += Arrow(UP*1.3,  0.0*DOWN, color =colors[i])
+            group += MathTex(item, font_size=35)   
         
         # arrange and then animate the base component model
-        self.next_section(skip_animations=False)
         group.arrange(DOWN)
         for i in range(0, len(group), 2):
             self.play(Create(group[i])) # arrow
@@ -48,23 +51,25 @@ class InfluenceDiagram(ThreeDScene):
             self.play(Write(group[i+1])) # text
 
         # now add the topmost component which is spring stuff
-        spring_stuff= Text("Spring Stuff", font_size=20)
+        spring_stuff= MathTex(r"{{Spring}}\;Stuff", font_size=35)
         new_group = VGroup(spring_stuff,*group.copy())
         new_group.arrange(DOWN)
         spring_stuff_mob = new_group[0]
         self.play(group.animate.shift(group.get_top() - new_group.get_top()))
         self.wait(0.5)
         self.play(Write(spring_stuff_mob))
+        self.replace(group, new_group)
         self.wait(1)
 
 
 
         # Transform "spring stuff into spring displacement"
-        spring_displacement= Text("Spring Displacement", font_size=20).move_to(spring_stuff.get_center())
+        spring_displacement_str = r"{{Spring}}\;Displacement"
+        items.insert(0,spring_displacement_str)
+        spring_displacement= MathTex(spring_displacement_str, font_size=35).move_to(spring_stuff.get_center())
         self.play(Transform(spring_stuff_mob, spring_displacement))
         self.wait(0.5)
 
-        self.next_section()
 
 
         def zero_but_comp(comp, point3d):
@@ -95,7 +100,7 @@ class InfluenceDiagram(ThreeDScene):
         self.wait(1)
 
         # Arrow from pos to displacement
-        arrow = VMobject(color=BLUE)
+        arrow = VMobject(color=BLUE_E)
         arrow.add_points_as_corners(points)
         arrow_head = ArrowTriangleTip(fill_opacity=1, width=0.15, length=0.18).move_to(points[-1])
         arrow_head.rotate(PI)
@@ -103,33 +108,64 @@ class InfluenceDiagram(ThreeDScene):
         self.play(Create(complete_arrow), run_time=4)
         self.wait(1)
 
+        # transform all the words into functions
+        # the lists are reversed because the order of the strings in the vgroup are opposite.
+        # also its a lot easier to pop instead of keeping track of indexes
+        items.reverse()
+        corresponding_math_symbols = [r"\Delta \vec{x}", r"\vec{F}", r"\vec{a}", r"\vec{v}", r"\vec{x}"]
+        corresponding_math_symbols.reverse()
+        animations = []
+        for i in range(0,len(new_group),2):
+            component_first_word = items.pop().split(r"\;")[0]
+            latex = component_first_word + r"\;" + corresponding_math_symbols.pop()
+            transform_into = MathTex(latex, font_size=35).move_to(new_group[i].get_center())
+            animations.append(Transform(new_group[i], transform_into))
+
+
+        self.play(*animations) # play rewording everything from words into equations
+        # self.play(complete_arrow.animate.shift(RIGHT * 0.7))
+        # self.wait(1)
+        self.play(new_group.animate.shift(LEFT), complete_arrow.animate.shift(RIGHT * 0.7 + LEFT))
+        self.wait(1)
+
         # Make a group with everything
         new_group += complete_arrow
 
-        # remove the old group because its now part of new_group
-        self.remove(group)
-        self.play(new_group.animate.shift(LEFT))
+
+        middle_of_spring_nodeF = new_group[1].get_center() + RIGHT*3
+        # REMEMBER: this is the component model, no equations yet. 
+        spring_damping = MathTex(r"{{Spring}}\;Damping", font_size =35)
+        self.play(Write(spring_damping.move_to(middle_of_spring_nodeF)))
+        spring_velocity_eq = MathTex(r"{{Spring}}\; \vec{v}", font_size=35).move_to(middle_of_spring_nodeF)
+        self.wait(1)
+        self.play(Transform(spring_damping, spring_velocity_eq))
+
+        self.next_section()
+
+        arrow1 = Arrow(
+            new_group[0].get_right(), 
+            spring_velocity_eq.get_top()+ LEFT*0.3 + UP*0.1, 
+            stroke_width=4, 
+            max_tip_length_to_length_ratio=0.12,
+            color=BLUE_E,
+
+        )
+
+        arrow2 = Arrow(
+            spring_velocity_eq.get_bottom() + LEFT*0.3 + DOWN*0.1,
+            new_group[2].get_right(),
+            stroke_width=4, 
+            max_tip_length_to_length_ratio=0.12,
+            color=BLUE_E,
+        )
+
+        self.play(Create(arrow1))
+        self.play(Create(arrow2))
+
         self.wait(1)
 
-        # transform all the words into functions
-        # for item in new_group:
-        #     if item.(isinstance)
 
-        # self.begin_ambient_camera_rotation(rate=2, about='gamma')
-        # self.wait(3)
-        # self.stop_ambient_camera_rotation(about='gamma')
 
-        # axes_3d = ThreeDAxes()
-        # self.add(axes_3d)
-
-        # Move the camera to the right
-        self.set_camera_orientation(phi=0, theta=-90*DEGREES, gamma=0)
-        self.move_camera( phi=self.camera.get_phi() - 20*DEGREES, run_time=2)
-        self.wait()
-
-        # Move the camera to the left
-        self.move_camera(phi=self.camera.get_phi() + 40*DEGREES, run_time=2)
-        self.wait()
 
 
 
